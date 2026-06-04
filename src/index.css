@@ -1,0 +1,130 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/*
+  Vision-UI-inspired theme: deep navy background with a blue glow, glassmorphic translucent
+  cards, gradient accents. Dark is the only theme. Use logical Tailwind utilities (ps-/pe-/
+  ms-/me-/start-/end-) so the layout mirrors correctly between RTL (Hebrew) and LTR (English).
+*/
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --radius: 1.25rem;
+
+  --background: #060c2b;
+  --foreground: #ffffff;
+
+  /* translucent glass cards over the gradient background */
+  --card: rgba(15, 21, 53, 0.52);
+  --card-foreground: #ffffff;
+
+  --popover: #0b1233;
+  --popover-foreground: #ffffff;
+
+  --primary: #2152ff;
+  --primary-foreground: #ffffff;
+
+  --secondary: rgba(255, 255, 255, 0.06);
+  --secondary-foreground: #ffffff;
+
+  --muted: rgba(255, 255, 255, 0.05);
+  --muted-foreground: #a0aec0;
+
+  --accent: rgba(255, 255, 255, 0.08);
+  --accent-foreground: #ffffff;
+
+  --destructive: #f56565;
+
+  --border: rgba(255, 255, 255, 0.12);
+  --input: rgba(255, 255, 255, 0.14);
+  --ring: #3b82f6;
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 8px);
+  --radius-md: calc(var(--radius) - 4px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", "Noto Sans Hebrew", sans-serif;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  html {
+    background-color: #04081f;
+  }
+  body {
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    min-height: 100vh;
+    /* navy base + blue glow toward the lower area (Vision UI look) */
+    background-color: #060c2b;
+    background-image:
+      radial-gradient(ellipse 70% 55% at 75% 115%, rgba(33, 82, 255, 0.5), transparent 60%),
+      radial-gradient(ellipse 60% 50% at 12% -10%, rgba(28, 41, 99, 0.55), transparent 55%);
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+  }
+
+  /* Glass effect for every translucent card surface. */
+  .bg-card {
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+
+  input[type="checkbox"] {
+    accent-color: var(--color-primary);
+  }
+
+  /* Native dropdowns: render the option popup dark, not white-on-white. */
+  select {
+    color-scheme: dark;
+  }
+  option,
+  optgroup {
+    background-color: #0d1535;
+    color: #ffffff;
+  }
+
+  /* Native date picker text/icon visible on dark inputs */
+  input[type="date"] {
+    color-scheme: dark;
+  }
+
+  /* subtle dark scrollbars */
+  * {
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  }
+}
+
+@layer utilities {
+  /* Brand blue→indigo gradient used on primary buttons, active nav, icon tiles. */
+  .bg-brand-gradient {
+    background-image: linear-gradient(135deg, #0075ff 0%, #2152ff 50%, #4318ff 100%);
+  }
+  .shadow-glow {
+    box-shadow: 0 12px 30px -10px rgba(33, 82, 255, 0.55);
+  }
+}
