@@ -22,6 +22,7 @@ export interface KbDoc {
   issuedBy: Bilingual;
   issuedTo: Bilingual;
   example: Bilingual;
+  notes?: Bilingual;
 }
 
 export interface KbProcess {
@@ -89,13 +90,13 @@ export const KB_PROCESSES: KbProcess[] = [
     steps: [
       { stage: { he: "פניית לקוח — תיקון, תחזוקה או שדרוג ציוד.", en: "Client request — repair, maintenance or equipment upgrade." }, docs: { he: "בקשה בע\"פ / בכתב", en: "Verbal / written request" } },
       { stage: { he: "יציאת טכנאי — הטכנאי מגיע לאתר, מאבחן ומבצע את העבודה.", en: "Technician dispatch — the technician comes on site, diagnoses and performs the work." }, docs: { he: "—", en: "—" } },
-      { stage: { he: "תעודת משלוח — תיעוד מה בוצע, שעות עבודה, חלקים ונסיעה.", en: "Delivery note — records what was done, work hours, parts and travel." }, docs: { he: "תעודת משלוח", en: "Delivery note" } },
-      { stage: { he: "חשבונית מס — על בסיס התעודה מונפקת חשבונית מס ללקוח עם מע\"מ 18%.", en: "Tax invoice — based on the delivery note, a tax invoice with 18% VAT is issued." }, docs: { he: "חשבונית מס", en: "Tax invoice" } },
+      { stage: { he: "תעודת משלוח (דוח עבודה) — תיעוד מה בוצע, שעות עבודה, חלקים ונסיעה. על בסיס הדוח מונפקת תעודת המשלוח.", en: "Delivery note (Report) — records what was done, work hours, parts and travel. The delivery note is issued based on the signed work report." }, docs: { he: "תעודת משלוח", en: "Delivery note (Report)" } },
+      { stage: { he: "חשבונית מס — על בסיס תעודת המשלוח מונפקת חשבונית מס ללקוח עם מע\"מ 18%. לעיתים קרובות החשבונית היא מרוכזת (חשבונית מרוכזת) הכוללת מספר תעודות משלוח מאותו חודש.", en: "Tax invoice — based on the delivery note, a tax invoice with 18% VAT is issued. Often issued as a consolidated invoice (חשבונית מרוכזת) collecting several delivery notes from the same month." }, docs: { he: "חשבונית מס", en: "Tax invoice" } },
       { stage: { he: "תשלום הלקוח — העברה בנקאית או כרטיס.", en: "Client payment — bank transfer or card." }, docs: { he: "קבלה", en: "Receipt" } },
       { stage: { he: "חשבונית זיכוי — במקרה של תיקון/הנחה מונפקת חשבונית מס זיכוי.", en: "Credit note — for a correction/discount, a credit note is issued." }, docs: { he: "חשבונית מס זיכוי", en: "Credit note" } },
     ],
     documents: [
-      { name: { he: "תעודת משלוח", en: "Delivery note" }, issuedBy: { he: "VM Robotics", en: "VM Robotics" }, issuedTo: { he: "לקוח", en: "Client" }, example: { he: "№10060 — מוצרי שלם; №10172 — אילה פלסט", en: "#10060 — Mutsrey Shalem; #10172 — Ayala Plast" } },
+      { name: { he: "תעודת משלוח (דוח עבודה)", en: "Delivery note (Report)" }, issuedBy: { he: "VM Robotics", en: "VM Robotics" }, issuedTo: { he: "לקוח", en: "Client" }, example: { he: "№10060 — מוצרי שלם; №10172 — אילה פלסט", en: "#10060 — Mutsrey Shalem; #10172 — Ayala Plast" }, notes: { he: "מבוסס על דוח העבודה החתום. חשבונית מרוכזת יכולה לכסות מספר תעודות מאותו חודש.", en: "Based on the signed work report. A consolidated invoice (חשבונית מרוכזת) may cover several delivery notes from the same month." } },
       { name: { he: "חשבונית מס", en: "Tax invoice" }, issuedBy: { he: "VM Robotics", en: "VM Robotics" }, issuedTo: { he: "לקוח", en: "Client" }, example: { he: "№10064 — גרין פלסטיק (₪2,773)", en: "#10064 — Green Plastic (₪2,773)" } },
       { name: { he: "קבלה", en: "Receipt" }, issuedBy: { he: "VM Robotics", en: "VM Robotics" }, issuedTo: { he: "לקוח", en: "Client" }, example: { he: "№30037 — גרין פלסטיק, ₪2,773 (28/05/26)", en: "#30037 — Green Plastic, ₪2,773 (28/05/26)" } },
       { name: { he: "חשבונית מס זיכוי", en: "Credit note" }, issuedBy: { he: "VM Robotics", en: "VM Robotics" }, issuedTo: { he: "לקוח", en: "Client" }, example: { he: "№50008 — גרין פלסטיק, ‎-₪2,124", en: "#50008 — Green Plastic, -₪2,124" } },

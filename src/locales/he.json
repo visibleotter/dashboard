@@ -22,6 +22,7 @@
     "calendar": "לוח שנה",
     "tasks": "משימות",
     "kb": "מדריך",
+    "accounting": "חשבונאות",
     "signOut": "התנתקות"
   },
   "login": {
@@ -44,7 +45,11 @@
     "allPresent": "כל המסמכים הצפויים קיימים ✓",
     "missingLabel": "חסר ({satisfied}/{total}):",
     "incompleteChildren": "{n} תיקי-בן חסרים",
-    "financeTitle": "תקציב פרויקטים"
+    "financeTitle": "תקציב פרויקטים",
+    "projectBudget": "תקציב פרויקט",
+    "weeklyReview": "סקירה שבועית",
+    "activeCases": "תיקים פעילים",
+    "standaloneTasks": "משימות (ללא תיק)"
   },
   "spend": {
     "title": "תקציב מול הוצאה",
@@ -200,6 +205,59 @@
     "kindCase": "תיק",
     "kindMilestone": "תשלום",
     "kindTask": "משימה"
+  },
+  "accounting": {
+    "title": "חשבונאות",
+    "subtitle": "תלושי שכר, אישורי מס, הוצאות חברה ועלויות תפעול.",
+    "tabPayslips": "תלושי שכר",
+    "tabTaxCerts": "אישורי מס",
+    "tabExpenses": "הוצאות",
+    "tabOpCosts": "עלויות תפעול",
+    "year": "שנה",
+    "noData": "אין נתונים עדיין.",
+    "upload": "העלאה",
+    "uploading": "מעלה…",
+    "file": "קובץ",
+    "notes": "הערות",
+    "amount": "סכום",
+    "currency": "מטבע",
+    "date": "תאריך",
+    "deleteConfirm": "למחוק רשומה זו?",
+    "payslips": {
+      "employee": "עובד",
+      "received": "התקבל",
+      "noEmployees": "לא נמצאו עובדים.",
+      "months": ["ינו","פבר","מרץ","אפר","מאי","יונ","יול","אוג","ספט","אוק","נוב","דצמ"]
+    },
+    "taxCerts": {
+      "add": "+ אישור מס",
+      "kind": "סוג",
+      "kindWithholding": "אישור ניכוי מס",
+      "kindForm101": "טופס 101",
+      "validFrom": "תקף מ",
+      "validTo": "תקף עד",
+      "rate": "שיעור %",
+      "noCerts": "אין אישורי מס."
+    },
+    "expenses": {
+      "add": "+ הוצאה",
+      "supplier": "ספק",
+      "invoiceNumber": "מס' חשבונית",
+      "category": "קטגוריה",
+      "rivhitUploaded": "ברווחית",
+      "rivhitPending": "ממתין",
+      "markUploaded": "סמן כהועלה",
+      "unmark": "הסר סימון",
+      "noExpenses": "לא נרשמו הוצאות.",
+      "filterAll": "הכול",
+      "filterPending": "ממתין להעלאה",
+      "filterDone": "הועלה"
+    },
+    "opCosts": {
+      "total": "סה\"כ",
+      "noCategories": "לא הוגדרו קטגוריות עלות.",
+      "monthLabels": ["ינו","פבר","מרץ","אפר","מאי","יונ","יול","אוג","ספט","אוק","נוב","דצמ"]
+    }
   },
   "kb": {
     "title": "מדריך תהליכים",

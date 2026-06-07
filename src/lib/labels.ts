@@ -4,6 +4,7 @@ import type {
   CounterpartyKind,
   DocType,
   TaskPriority,
+  WorkStatus,
 } from "@/types/db";
 
 /*
@@ -36,14 +37,34 @@ export const statusLabel: Record<CaseStatus, { he: string; en: string }> = {
   closed: { he: "סגור", en: "Closed" },
 };
 
-/** Tailwind classes for the status badge, by status (dark glass theme). */
+/** Tailwind classes for the (legacy) completeness status badge. */
 export const statusBadgeClass: Record<CaseStatus, string> = {
-  complete: "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-400/25",
-  incomplete: "bg-amber-500/15 text-amber-300 ring-1 ring-amber-400/25",
-  attention: "bg-red-500/15 text-red-300 ring-1 ring-red-400/25",
-  in_transit: "bg-sky-500/15 text-sky-300 ring-1 ring-sky-400/25",
-  closed: "bg-white/10 text-neutral-300 ring-1 ring-white/15",
+  complete: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200",
+  incomplete: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
+  attention: "bg-red-50 text-red-600 ring-1 ring-red-200",
+  in_transit: "bg-sky-50 text-sky-700 ring-1 ring-sky-200",
+  closed: "bg-gray-100 text-gray-600 ring-1 ring-gray-200",
 };
+
+export const workStatusLabel: Record<WorkStatus, { he: string; en: string }> = {
+  planned:      { he: "מתוכנן",   en: "Planned" },
+  in_progress:  { he: "בביצוע",   en: "In progress" },
+  on_hold:      { he: "בהמתנה",   en: "On hold" },
+  robot_on_way: { he: "רובוט בדרך", en: "Robot on the way" },
+  done:         { he: "הושלם",    en: "Done" },
+};
+
+export const workStatusBadgeClass: Record<WorkStatus, string> = {
+  planned:      "bg-blue-50   text-blue-700   ring-1 ring-blue-200",
+  in_progress:  "bg-green-50  text-green-700  ring-1 ring-green-200",
+  on_hold:      "bg-red-50    text-red-600    ring-1 ring-red-200",
+  robot_on_way: "bg-amber-50  text-amber-700  ring-1 ring-amber-200",
+  done:         "bg-purple-50 text-purple-700 ring-1 ring-purple-200",
+};
+
+export const ALL_WORK_STATUSES: WorkStatus[] = [
+  "planned", "in_progress", "on_hold", "robot_on_way", "done",
+];
 
 export const counterpartyKindLabel: Record<CounterpartyKind, { he: string; en: string }> = {
   supplier: { he: "ספק", en: "Supplier" },
@@ -84,12 +105,13 @@ export const docTypeLabel: Record<DocType, { he: string; en: string }> = {
   vendor_onboarding: { he: "פתיחת ספק", en: "Vendor onboarding" },
   tax_withholding_cert: { he: "אישור ניכוי מס במקור", en: "Tax withholding cert." },
   form_101: { he: "טופס 101", en: "Form 101" },
+  work_report: { he: "דוח עבודה", en: "Work report" },
 };
 
 export const taskPriorityLabel: Record<TaskPriority, { he: string; en: string; cls: string }> = {
-  high: { he: "גבוהה", en: "High", cls: "bg-red-500/15 text-red-300 ring-1 ring-red-400/25" },
-  med: { he: "בינונית", en: "Medium", cls: "bg-amber-500/15 text-amber-300 ring-1 ring-amber-400/25" },
-  low: { he: "נמוכה", en: "Low", cls: "bg-white/10 text-neutral-300 ring-1 ring-white/15" },
+  high: { he: "גבוהה", en: "High", cls: "bg-red-50 text-red-600 ring-1 ring-red-200" },
+  med: { he: "בינונית", en: "Medium", cls: "bg-amber-50 text-amber-700 ring-1 ring-amber-200" },
+  low: { he: "נמוכה", en: "Low", cls: "bg-gray-100 text-gray-600 ring-1 ring-gray-200" },
 };
 
 export const ALL_TASK_PRIORITIES: TaskPriority[] = ["high", "med", "low"];
@@ -110,4 +132,5 @@ export const ALL_DOC_TYPES: DocType[] = [
   "vendor_onboarding",
   "tax_withholding_cert",
   "form_101",
+  "work_report",
 ];

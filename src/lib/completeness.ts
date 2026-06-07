@@ -1,5 +1,8 @@
-import type { CaseStatus, DocType } from "@/types/db";
+import type { CaseStatus, DocType, WorkStatus } from "@/types/db";
 import type { CaseWithDocs } from "@/lib/data";
+
+/** Statuses where document completeness is irrelevant (work hasn't started or is paused). */
+export const INACTIVE_WORK_STATUSES: WorkStatus[] = ["planned", "on_hold", "done"];
 
 /*
   Completeness engine (brief §3). A case's completeness compares the doc_types of its
@@ -63,6 +66,11 @@ export interface CaseView {
   isCompleteAggregated: boolean;
   /** Status to show, factoring in aggregation + explicit human states. */
   status: CaseStatus;
+  /**
+   * Whether to surface the missing-documents indicator.
+   * False for planned/on_hold/done — the work hasn't started so gaps are expected and irrelevant.
+   */
+  showMissingDocs: boolean;
 }
 
 /** Build per-case views with completeness + parent aggregation from a flat fetch. */
@@ -88,6 +96,7 @@ export function buildCaseViews(cases: CaseWithDocs[]): CaseView[] {
     const childOwn = children.map(ownCompleteOf);
     const incompleteChildren = childOwn.filter((cc) => !cc.isComplete).length;
     const isCompleteAggregated = own.isComplete && incompleteChildren === 0;
+    const workStatus = (c as CaseWithDocs & { work_status?: string }).work_status ?? "in_progress";
     return {
       case: c,
       own,
@@ -95,6 +104,7 @@ export function buildCaseViews(cases: CaseWithDocs[]): CaseView[] {
       incompleteChildren,
       isCompleteAggregated,
       status: effectiveStatus(c.status, isCompleteAggregated),
+      showMissingDocs: !INACTIVE_WORK_STATUSES.includes(workStatus as never),
     };
   });
 }

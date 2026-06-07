@@ -9,6 +9,7 @@ import { CaseFormPage } from "@/pages/CaseFormPage";
 import { TasksPage } from "@/pages/TasksPage";
 import { CalendarPage } from "@/pages/CalendarPage";
 import { KnowledgeBasePage } from "@/pages/KnowledgeBasePage";
+import { AccountingPage } from "@/pages/AccountingPage";
 
 /*
   Top-level: auth gate, then the router (Phase 3).
@@ -41,6 +42,7 @@ function App() {
           <Route path="calendar" element={<CalendarPage />} />
           <Route path="tasks" element={<TasksPage />} />
           <Route path="kb" element={<KnowledgeBasePage />} />
+          <Route path="accounting" element={<AccountingPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

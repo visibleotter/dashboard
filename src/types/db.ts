@@ -36,9 +36,17 @@ export type DocType =
   | "purchase_order"
   | "vendor_onboarding"
   | "tax_withholding_cert"
-  | "form_101";
+  | "form_101"
+  | "work_report";
 
 export type ExtractionStatus = "pending" | "extracted" | "confirmed";
+
+export type WorkStatus =
+  | "planned"
+  | "in_progress"
+  | "on_hold"
+  | "robot_on_way"
+  | "done";
 
 export type TaskPriority = "high" | "med" | "low";
 
@@ -82,6 +90,7 @@ export type Case = {
   title: string;
   counterparty_id: string | null;
   status: CaseStatus;
+  work_status: WorkStatus;
   currency: string | null;
   total_amount: number | null;
   due_date: string | null;
@@ -143,6 +152,76 @@ export type Person = {
   role: string | null;
   email: string | null;
   active: boolean;
+  is_employee: boolean;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+// ---- Accounting (0006): payslips, tax certs, expenses, operating costs ----
+
+export type Payslip = {
+  id: string;
+  person_id: string;
+  year: number;
+  month: number;
+  storage_path: string | null;
+  original_filename: string | null;
+  mime_type: string | null;
+  received: boolean;
+  amount: number | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type TaxCert = {
+  id: string;
+  kind: string;
+  year: number | null;
+  valid_from: string | null;
+  valid_to: string | null;
+  rate: number | null;
+  storage_path: string | null;
+  original_filename: string | null;
+  mime_type: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Expense = {
+  id: string;
+  supplier_id: string | null;
+  invoice_number: string | null;
+  amount: number | null;
+  currency: string | null;
+  expense_date: string | null;
+  category: string | null;
+  storage_path: string | null;
+  original_filename: string | null;
+  mime_type: string | null;
+  rivhit_uploaded: boolean;
+  rivhit_uploaded_at: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type OpCostCategory = {
+  id: string;
+  name: string;
+  sort: number;
+  active: boolean;
+  created_at: string;
+};
+
+export type OpCostEntry = {
+  id: string;
+  year: number;
+  month: number;
+  category_id: string;
+  amount: number | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -213,7 +292,7 @@ export interface Database {
       };
       cases: {
         Row: Case;
-        Insert: Insertable<Case, DefaultCols | "status">;
+        Insert: Insertable<Case, DefaultCols | "status" | "work_status">;
         Update: Partial<Case>;
         Relationships: [];
       };
@@ -237,7 +316,7 @@ export interface Database {
       };
       people: {
         Row: Person;
-        Insert: Insertable<Person, DefaultCols | "active">;
+        Insert: Insertable<Person, DefaultCols | "active" | "is_employee">;
         Update: Partial<Person>;
         Relationships: [];
       };
@@ -253,12 +332,43 @@ export interface Database {
         Update: Partial<OrderRow>;
         Relationships: [];
       };
+      payslips: {
+        Row: Payslip;
+        Insert: Insertable<Payslip, DefaultCols | "received">;
+        Update: Partial<Payslip>;
+        Relationships: [];
+      };
+      tax_certs: {
+        Row: TaxCert;
+        Insert: Insertable<TaxCert, DefaultCols | "kind">;
+        Update: Partial<TaxCert>;
+        Relationships: [];
+      };
+      expenses: {
+        Row: Expense;
+        Insert: Insertable<Expense, DefaultCols | "currency" | "rivhit_uploaded">;
+        Update: Partial<Expense>;
+        Relationships: [];
+      };
+      op_cost_categories: {
+        Row: OpCostCategory;
+        Insert: Insertable<OpCostCategory, "id" | "created_at" | "sort" | "active">;
+        Update: Partial<OpCostCategory>;
+        Relationships: [];
+      };
+      op_cost_entries: {
+        Row: OpCostEntry;
+        Insert: Insertable<OpCostEntry, DefaultCols>;
+        Update: Partial<OpCostEntry>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
     Enums: {
       case_group: CaseGroup;
       case_status: CaseStatus;
+      work_status: WorkStatus;
       doc_type: DocType;
       extraction_status: ExtractionStatus;
       task_priority: TaskPriority;

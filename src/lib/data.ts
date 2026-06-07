@@ -7,12 +7,18 @@ import type {
   CounterpartyKind,
   DocType,
   DocumentRow,
+  Expense,
+  OpCostCategory,
+  OpCostEntry,
   OrderRow,
   PaymentMilestone,
+  Payslip,
   Person,
   TaskPriority,
   TaskRow,
+  TaxCert,
   WorkItem,
+  WorkStatus,
 } from "@/types/db";
 
 /** Private Supabase Storage bucket for uploaded source files (created in 0003_storage.sql). */
@@ -144,6 +150,7 @@ export interface CaseInput {
   parent_id?: string | null;
   counterparty_id?: string | null;
   status?: CaseStatus;
+  work_status?: WorkStatus;
   currency?: string | null;
   total_amount?: number | null;
   due_date?: string | null;
@@ -162,6 +169,11 @@ export async function updateCase(id: string, patch: Partial<CaseInput>): Promise
 
 export async function deleteCase(id: string): Promise<void> {
   const { error } = await supabase.from("cases").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+export async function updateWorkStatus(id: string, workStatus: WorkStatus): Promise<void> {
+  const { error } = await supabase.from("cases").update({ work_status: workStatus }).eq("id", id);
   if (error) throw new Error(error.message);
 }
 
@@ -543,4 +555,189 @@ export async function listSpendByCase(): Promise<Map<string, number>> {
   for (const r of (ordersRes.data ?? []) as Pick<OrderRow, "case_id" | "price">[]) add(r.case_id, r.price);
   for (const r of (wiRes.data ?? []) as Pick<WorkItem, "case_id" | "cost">[]) add(r.case_id, r.cost);
   return map;
+}
+
+// ============================================================================
+// Accounting (0006): employees, payslips, tax certs, expenses, operating costs.
+// Files reuse the private `documents` bucket under subfolders + signed URLs.
+// ============================================================================
+
+/** Upload a file to a subfolder of the documents bucket; returns the stored metadata. */
+export async function uploadAccountingFile(
+  prefix: string,
+  file: File,
+): Promise<{ storage_path: string; original_filename: string; mime_type: string | null }> {
+  const dot = file.name.lastIndexOf(".");
+  const ext = dot > 0 ? file.name.slice(dot).toLowerCase().replace(/[^.a-z0-9]/g, "") : "";
+  const path = `${prefix}/${crypto.randomUUID()}${ext}`;
+  const { error } = await supabase.storage
+    .from(DOCUMENTS_BUCKET)
+    .upload(path, file, { contentType: file.type || undefined, upsert: false });
+  if (error) throw new Error(error.message);
+  return { storage_path: path, original_filename: file.name, mime_type: file.type || null };
+}
+
+// ---- employees (people flagged is_employee) ----
+
+export async function listEmployees(): Promise<Person[]> {
+  return unwrap(
+    await supabase.from("people").select("*").eq("is_employee", true).order("name"),
+  );
+}
+
+export async function createEmployee(input: { name: string; role?: string | null }): Promise<Person> {
+  return unwrap(
+    await supabase.from("people").insert({ ...input, is_employee: true }).select("*").single(),
+  );
+}
+
+// ---- payslips ----
+
+export interface PayslipWithPerson extends Payslip {
+  person: Pick<Person, "id" | "name"> | null;
+}
+
+export async function listPayslips(year: number): Promise<PayslipWithPerson[]> {
+  return unwrap(
+    await supabase
+      .from("payslips")
+      .select("*, person:people(id, name)")
+      .eq("year", year),
+  );
+}
+
+/** Insert-or-update a payslip for (person, year, month). */
+export async function upsertPayslip(input: {
+  person_id: string;
+  year: number;
+  month: number;
+  received?: boolean;
+  amount?: number | null;
+  storage_path?: string | null;
+  original_filename?: string | null;
+  mime_type?: string | null;
+  notes?: string | null;
+}): Promise<Payslip> {
+  return unwrap(
+    await supabase
+      .from("payslips")
+      .upsert(input, { onConflict: "person_id,year,month" })
+      .select("*")
+      .single(),
+  );
+}
+
+export async function deletePayslip(id: string): Promise<void> {
+  const { error } = await supabase.from("payslips").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+// ---- tax certs ----
+
+export async function listTaxCerts(): Promise<TaxCert[]> {
+  return unwrap(
+    await supabase.from("tax_certs").select("*").order("valid_to", { ascending: false, nullsFirst: false }),
+  );
+}
+
+export async function createTaxCert(input: Partial<TaxCert> & { kind?: string }): Promise<TaxCert> {
+  return unwrap(await supabase.from("tax_certs").insert(input).select("*").single());
+}
+
+export async function updateTaxCert(id: string, patch: Partial<TaxCert>): Promise<TaxCert> {
+  return unwrap(await supabase.from("tax_certs").update(patch).eq("id", id).select("*").single());
+}
+
+export async function deleteTaxCert(id: string): Promise<void> {
+  const { error } = await supabase.from("tax_certs").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+// ---- expenses (→ Rivhit) ----
+
+export interface ExpenseWithSupplier extends Expense {
+  supplier: Pick<Counterparty, "id" | "name"> | null;
+}
+
+export async function listExpenses(): Promise<ExpenseWithSupplier[]> {
+  return unwrap(
+    await supabase
+      .from("expenses")
+      .select("*, supplier:counterparties(id, name)")
+      .order("expense_date", { ascending: false, nullsFirst: false }),
+  );
+}
+
+export interface ExpenseInput {
+  supplier_id?: string | null;
+  invoice_number?: string | null;
+  amount?: number | null;
+  currency?: string | null;
+  expense_date?: string | null;
+  category?: string | null;
+  storage_path?: string | null;
+  original_filename?: string | null;
+  mime_type?: string | null;
+  rivhit_uploaded?: boolean;
+  notes?: string | null;
+}
+
+export async function createExpense(input: ExpenseInput): Promise<Expense> {
+  return unwrap(await supabase.from("expenses").insert(input).select("*").single());
+}
+
+export async function updateExpense(id: string, patch: Partial<ExpenseInput>): Promise<Expense> {
+  return unwrap(await supabase.from("expenses").update(patch).eq("id", id).select("*").single());
+}
+
+export async function setExpenseRivhit(id: string, uploaded: boolean): Promise<Expense> {
+  return updateExpense(id, {
+    rivhit_uploaded: uploaded,
+    // stamp time only when marking uploaded
+    ...(uploaded ? {} : {}),
+  } as ExpenseInput).then(async (e) => {
+    await supabase
+      .from("expenses")
+      .update({ rivhit_uploaded_at: uploaded ? new Date().toISOString() : null })
+      .eq("id", id);
+    return e;
+  });
+}
+
+export async function deleteExpense(id: string): Promise<void> {
+  const { error } = await supabase.from("expenses").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+// ---- operating costs ----
+
+export async function listOpCostCategories(): Promise<OpCostCategory[]> {
+  return unwrap(
+    await supabase.from("op_cost_categories").select("*").eq("active", true).order("sort"),
+  );
+}
+
+export async function listOpCostEntries(year: number): Promise<OpCostEntry[]> {
+  return unwrap(await supabase.from("op_cost_entries").select("*").eq("year", year));
+}
+
+/** Insert-or-update one (year, month, category) amount. Deletes the row when cleared. */
+export async function upsertOpCostEntry(
+  year: number,
+  month: number,
+  categoryId: string,
+  amount: number | null,
+): Promise<void> {
+  if (amount == null) {
+    const { error } = await supabase
+      .from("op_cost_entries")
+      .delete()
+      .match({ year, month, category_id: categoryId });
+    if (error) throw new Error(error.message);
+    return;
+  }
+  const { error } = await supabase
+    .from("op_cost_entries")
+    .upsert({ year, month, category_id: categoryId, amount }, { onConflict: "year,month,category_id" });
+  if (error) throw new Error(error.message);
 }

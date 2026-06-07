@@ -5,6 +5,7 @@ import {
   CalendarDays,
   ListChecks,
   BookOpen,
+  Calculator,
   LogOut,
   type LucideIcon,
 } from "lucide-react";
@@ -27,6 +28,7 @@ const NAV: NavItem[] = [
   { to: "/calendar", icon: CalendarDays, key: "nav.calendar" },
   { to: "/tasks", icon: ListChecks, key: "nav.tasks" },
   { to: "/kb", icon: BookOpen, key: "nav.kb" },
+  { to: "/accounting", icon: Calculator, key: "nav.accounting" },
 ];
 
 /* Vision-UI style shell: fixed glass sidebar + top bar + routed content. */
@@ -43,12 +45,12 @@ export function AppLayout() {
     <div className="min-h-screen">
       {/* Sidebar */}
       <aside className="fixed inset-y-0 start-0 z-20 hidden w-64 flex-col p-4 lg:flex">
-        <div className="flex h-full flex-col rounded-2xl border border-white/10 bg-card p-4 shadow-xl shadow-black/20">
+        <div className="flex h-full flex-col rounded-2xl border bg-card p-4 shadow-card">
           <Link to="/" className="px-2 py-3 text-center">
-            <span className="text-base font-bold tracking-[0.2em]">VISION</span>
-            <span className="ms-1 text-base font-light tracking-[0.2em] text-muted-foreground">UI</span>
+            <span className="text-base font-bold tracking-[0.2em] text-foreground">VM</span>
+            <span className="ms-1 text-base font-semibold tracking-[0.2em] text-primary">Robotics</span>
           </Link>
-          <div className="my-3 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+          <div className="my-3 h-px bg-border" />
 
           <nav className="flex flex-1 flex-col gap-1.5">
             {NAV.map((item) => (
@@ -58,14 +60,14 @@ export function AppLayout() {
                     className={cn(
                       "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
                       isActive
-                        ? "bg-white/10 font-medium text-white"
-                        : "text-muted-foreground hover:bg-white/5 hover:text-white",
+                        ? "bg-primary/10 font-semibold text-primary"
+                        : "text-muted-foreground hover:bg-gray-100 hover:text-foreground",
                     )}
                   >
                     <span
                       className={cn(
                         "grid size-8 shrink-0 place-items-center rounded-lg",
-                        isActive ? "bg-brand-gradient text-white shadow-glow" : "bg-white/10 text-sky-300",
+                        isActive ? "bg-brand-gradient text-white shadow-glow" : "bg-gray-100 text-muted-foreground",
                       )}
                     >
                       <item.icon className="size-4" />
@@ -82,7 +84,7 @@ export function AppLayout() {
       {/* Content area (offset for the sidebar on large screens) */}
       <div className="lg:ms-64">
         <header className="sticky top-0 z-10 px-4 pt-4 sm:px-6">
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-card px-4 py-3 shadow-lg shadow-black/10">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-card px-4 py-3 shadow-card">
             <div className="leading-tight">
               <div className="text-xs text-muted-foreground">
                 {t("common.appName")} / {t(current.key)}
@@ -110,8 +112,8 @@ export function AppLayout() {
                 end={item.end}
                 className={({ isActive }) =>
                   cn(
-                    "flex items-center gap-2 whitespace-nowrap rounded-xl border border-white/10 px-3 py-1.5 text-sm",
-                    isActive ? "bg-brand-gradient text-white" : "bg-card text-muted-foreground",
+                    "flex items-center gap-2 whitespace-nowrap rounded-xl border px-3 py-1.5 text-sm",
+                    isActive ? "bg-brand-gradient text-white border-primary/20" : "bg-card text-muted-foreground",
                   )
                 }
               >

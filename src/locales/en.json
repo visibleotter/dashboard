@@ -22,6 +22,7 @@
     "calendar": "Calendar",
     "tasks": "Tasks",
     "kb": "Handbook",
+    "accounting": "Accounting",
     "signOut": "Sign out"
   },
   "login": {
@@ -44,7 +45,11 @@
     "allPresent": "All expected documents present ✓",
     "missingLabel": "Missing ({satisfied}/{total}):",
     "incompleteChildren": "{n} incomplete child cases",
-    "financeTitle": "Projects budget"
+    "financeTitle": "Projects budget",
+    "projectBudget": "Project budget",
+    "weeklyReview": "Weekly review",
+    "activeCases": "active cases",
+    "standaloneTasks": "Tasks (no case)"
   },
   "spend": {
     "title": "Budget vs Spent",
@@ -200,6 +205,59 @@
     "kindCase": "Case",
     "kindMilestone": "Payment",
     "kindTask": "Task"
+  },
+  "accounting": {
+    "title": "Accounting",
+    "subtitle": "Payslips, tax certs, company expenses, and operating costs.",
+    "tabPayslips": "Payslips",
+    "tabTaxCerts": "Tax Certs",
+    "tabExpenses": "Expenses",
+    "tabOpCosts": "Operating Costs",
+    "year": "Year",
+    "noData": "Nothing here yet.",
+    "upload": "Upload",
+    "uploading": "Uploading…",
+    "file": "File",
+    "notes": "Notes",
+    "amount": "Amount",
+    "currency": "Currency",
+    "date": "Date",
+    "deleteConfirm": "Delete this record?",
+    "payslips": {
+      "employee": "Employee",
+      "received": "Received",
+      "noEmployees": "No employees found.",
+      "months": ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+    },
+    "taxCerts": {
+      "add": "+ Tax Cert",
+      "kind": "Type",
+      "kindWithholding": "Withholding cert",
+      "kindForm101": "Form 101",
+      "validFrom": "Valid from",
+      "validTo": "Valid to",
+      "rate": "Rate %",
+      "noCerts": "No tax certificates."
+    },
+    "expenses": {
+      "add": "+ Expense",
+      "supplier": "Supplier",
+      "invoiceNumber": "Invoice #",
+      "category": "Category",
+      "rivhitUploaded": "In Rivhit",
+      "rivhitPending": "Pending",
+      "markUploaded": "Mark as uploaded",
+      "unmark": "Unmark",
+      "noExpenses": "No expenses recorded.",
+      "filterAll": "All",
+      "filterPending": "Pending upload",
+      "filterDone": "Uploaded"
+    },
+    "opCosts": {
+      "total": "TOTAL",
+      "noCategories": "No cost categories configured.",
+      "monthLabels": ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+    }
   },
   "kb": {
     "title": "Process handbook",
