@@ -218,6 +218,34 @@ export type OpCostCategory = {
   created_at: string;
 };
 
+// ---- Payments (0010): cash-flow mirror from owner's Google Sheet ----
+
+export type PaymentDirection = "income" | "outcome";
+export type PaymentStatus = "paid" | "not_paid";
+
+export type Payment = {
+  id: string;
+  sheet_row_hash: string;
+  sheet_row_num: number | null;
+  date_opened: string | null;
+  due_date: string | null;
+  payment_received: string | null;
+  invoice_number: string | null;
+  direction: PaymentDirection;
+  price_before_vat: number | null;
+  price_after_vat: number | null;
+  remain: number | null;
+  currency: string | null;
+  status: PaymentStatus | null;
+  info: string | null;
+  client_raw: string | null;
+  counterparty_id: string | null;
+  case_id: string | null;
+  synced_at: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export type OpCostEntry = {
   id: string;
   year: number;
@@ -362,6 +390,12 @@ export interface Database {
         Row: OpCostEntry;
         Insert: Insertable<OpCostEntry, DefaultCols>;
         Update: Partial<OpCostEntry>;
+        Relationships: [];
+      };
+      payments: {
+        Row: Payment;
+        Insert: Insertable<Payment, DefaultCols | "synced_at" | "currency">;
+        Update: Partial<Payment>;
         Relationships: [];
       };
     };

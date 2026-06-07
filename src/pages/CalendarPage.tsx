@@ -6,14 +6,18 @@ import { URGENCY_ORDER, formatDate, relativeDays, urgencyMeta, urgencyOf } from 
 import { Badge } from "@/components/ui/badge";
 
 const kindCls: Record<CalendarKind, string> = {
-  case: "bg-indigo-500/15 text-indigo-300 ring-1 ring-indigo-400/25",
-  milestone: "bg-amber-500/15 text-amber-300 ring-1 ring-amber-400/25",
-  task: "bg-sky-500/15 text-sky-300 ring-1 ring-sky-400/25",
+  case: "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200",
+  milestone: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
+  task: "bg-sky-50 text-sky-700 ring-1 ring-sky-200",
+  income: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200",
+  outcome: "bg-red-50 text-red-700 ring-1 ring-red-200",
 };
 const kindKey: Record<CalendarKind, string> = {
   case: "calendar.kindCase",
   milestone: "calendar.kindMilestone",
   task: "calendar.kindTask",
+  income: "payments.income",
+  outcome: "payments.outcome",
 };
 
 const FILTERS: { key: CalendarKind | "all"; labelKey: string }[] = [
@@ -21,6 +25,8 @@ const FILTERS: { key: CalendarKind | "all"; labelKey: string }[] = [
   { key: "case", labelKey: "calendar.filterCases" },
   { key: "milestone", labelKey: "calendar.filterMilestones" },
   { key: "task", labelKey: "calendar.filterTasks" },
+  { key: "income", labelKey: "payments.income" },
+  { key: "outcome", labelKey: "payments.outcome" },
 ];
 
 export function CalendarPage() {
@@ -106,6 +112,17 @@ export function CalendarPage() {
                       </Link>
                     )}
                   </div>
+                  {(it.kind === "income" || it.kind === "outcome") && it.amount != null && (
+                    <span
+                      className={`text-sm font-medium ${
+                        it.kind === "income" ? "text-emerald-700" : "text-red-700"
+                      }`}
+                      dir="ltr"
+                    >
+                      {it.kind === "income" ? "+" : "−"}
+                      {Math.round(it.amount).toLocaleString(lang === "he" ? "he-IL" : "en-GB")} {it.currency ?? "ILS"}
+                    </span>
+                  )}
                   <div className="text-end text-sm">
                     <div>{formatDate(it.date, lang)}</div>
                     <div className="text-xs text-muted-foreground">{relativeDays(it.date, lang)}</div>

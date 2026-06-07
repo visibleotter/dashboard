@@ -8,6 +8,7 @@ import { CasesListPage } from "@/pages/CasesListPage";
 import { CaseFormPage } from "@/pages/CaseFormPage";
 import { TasksPage } from "@/pages/TasksPage";
 import { OrdersPage } from "@/pages/OrdersPage";
+import { PaymentsPage } from "@/pages/PaymentsPage";
 import { CalendarPage } from "@/pages/CalendarPage";
 import { KnowledgeBasePage } from "@/pages/KnowledgeBasePage";
 import { AccountingPage } from "@/pages/AccountingPage";
@@ -43,6 +44,7 @@ function App() {
           <Route path="calendar" element={<CalendarPage />} />
           <Route path="tasks" element={<TasksPage />} />
           <Route path="orders" element={<OrdersPage />} />
+          <Route path="payments" element={<PaymentsPage />} />
           <Route path="kb" element={<KnowledgeBasePage />} />
           <Route path="accounting" element={<AccountingPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />

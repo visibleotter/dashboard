@@ -11,6 +11,9 @@ import type {
   OpCostCategory,
   OpCostEntry,
   OrderRow,
+  Payment,
+  PaymentDirection,
+  PaymentStatus,
   PaymentMilestone,
   Payslip,
   Person,
@@ -382,9 +385,52 @@ export async function listTasksForCase(caseId: string): Promise<TaskRow[]> {
   );
 }
 
-// ---- calendar: every dated item across cases, milestones, tasks ----
+// ---- payments (0010): mirrored from owner's Google Sheet CashFlow_9 ----
 
-export type CalendarKind = "case" | "milestone" | "task";
+export interface PaymentWithRefs extends Payment {
+  counterparty: Pick<Counterparty, "id" | "name"> | null;
+  case: Pick<Case, "id" | "title"> | null;
+}
+
+export interface PaymentFilters {
+  direction?: PaymentDirection;
+  status?: PaymentStatus;
+}
+
+const PAYMENT_SELECT = "*, counterparty:counterparties(id, name), case:cases(id, title)";
+
+export async function listPayments(filters: PaymentFilters = {}): Promise<PaymentWithRefs[]> {
+  let q = supabase.from("payments").select(PAYMENT_SELECT);
+  if (filters.direction) q = q.eq("direction", filters.direction);
+  if (filters.status) q = q.eq("status", filters.status);
+  return unwrap(await q.order("due_date", { ascending: true, nullsFirst: false }));
+}
+
+/** Update the in-app linkage (case_id / counterparty_id). Sheet fields are read-only. */
+export async function updatePaymentLinkage(
+  id: string,
+  patch: { case_id?: string | null; counterparty_id?: string | null },
+) {
+  return unwrap(await supabase.from("payments").update(patch).eq("id", id).select("*").single());
+}
+
+/** Calls the Vercel API route that pulls fresh rows from the Google Sheet. */
+export async function syncPaymentsFromSheet(): Promise<{ upserted: number; deleted: number }> {
+  const { data: session } = await supabase.auth.getSession();
+  const token = session.session?.access_token;
+  if (!token) throw new Error("Not signed in");
+  const res = await fetch("/api/sync-payments", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.error ?? `Sync failed (${res.status})`);
+  return body;
+}
+
+// ---- calendar: every dated item across cases, milestones, tasks, payments ----
+
+export type CalendarKind = "case" | "milestone" | "task" | "income" | "outcome";
 
 export interface CalendarItem {
   id: string;
@@ -393,13 +439,16 @@ export interface CalendarItem {
   title: string;
   caseId: string | null;
   caseTitle: string | null;
-  /** done (task) or paid (milestone); undefined for cases. */
+  /** done (task) or paid (milestone / payment); undefined for cases. */
   resolved?: boolean;
+  /** Money amount for payment kinds; undefined otherwise. */
+  amount?: number | null;
+  currency?: string | null;
 }
 
 /** Merge all forward/back-looking due dates into one sorted list (brief §6 calendar). */
 export async function listCalendarItems(): Promise<CalendarItem[]> {
-  const [cases, milestones, tasks] = await Promise.all([
+  const [cases, milestones, tasks, payments] = await Promise.all([
     supabase.from("cases").select("id, title, due_date, status").not("due_date", "is", null),
     supabase
       .from("payment_milestones")
@@ -409,8 +458,12 @@ export async function listCalendarItems(): Promise<CalendarItem[]> {
       .from("tasks")
       .select("id, text, due_date, done, case:cases(id, title)")
       .not("due_date", "is", null),
+    supabase
+      .from("payments")
+      .select("id, due_date, direction, status, price_after_vat, currency, client_raw, info, case:cases(id, title)")
+      .not("due_date", "is", null),
   ]);
-  for (const r of [cases, milestones, tasks]) {
+  for (const r of [cases, milestones, tasks, payments]) {
     if (r.error) throw new Error(r.error.message);
   }
 
@@ -449,6 +502,32 @@ export async function listCalendarItems(): Promise<CalendarItem[]> {
       caseId: tt.case?.id ?? null,
       caseTitle: tt.case?.title ?? null,
       resolved: tt.done,
+    });
+  }
+  for (const p of (payments.data ?? []) as never[]) {
+    const pp = p as {
+      id: string;
+      due_date: string;
+      direction: PaymentDirection;
+      status: PaymentStatus | null;
+      price_after_vat: number | null;
+      currency: string | null;
+      client_raw: string | null;
+      info: string | null;
+      case: { id: string; title: string } | null;
+    };
+    // Title = client + info snippet (the sheet has no dedicated label column)
+    const titleParts = [pp.client_raw, pp.info?.slice(0, 60)].filter(Boolean);
+    items.push({
+      id: `payment:${pp.id}`,
+      date: pp.due_date,
+      kind: pp.direction, // "income" | "outcome"
+      title: titleParts.join(" — ") || (pp.direction === "income" ? "Income" : "Outcome"),
+      caseId: pp.case?.id ?? null,
+      caseTitle: pp.case?.title ?? null,
+      resolved: pp.status === "paid",
+      amount: pp.price_after_vat,
+      currency: pp.currency,
     });
   }
 
