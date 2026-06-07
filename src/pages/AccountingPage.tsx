@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+﻿import { useCallback, useEffect, useState } from "react";
 import { Check, ChevronDown, Paperclip, Plus, Trash2, Upload } from "lucide-react";
 import {
   createExpense,
@@ -36,7 +36,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 
-// ── helpers ────────────────────────────────────────────────────────────────
+// â”€â”€ helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const THIS_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: 6 }, (_, i) => THIS_YEAR - i);
@@ -46,7 +46,7 @@ function YearSelect({ value, onChange }: { value: number; onChange: (y: number) 
     <select
       value={value}
       onChange={(e) => onChange(Number(e.target.value))}
-      className="rounded-lg border border-white/10 bg-card px-3 py-1.5 text-sm"
+      className="rounded-lg border border-gray-200 bg-card px-3 py-1.5 text-sm"
     >
       {YEARS.map((y) => (
         <option key={y} value={y}>{y}</option>
@@ -77,11 +77,11 @@ function FileLink({ storagePath, name }: { storagePath: string | null; name?: st
   );
 }
 
-// ── tab bar ────────────────────────────────────────────────────────────────
+// â”€â”€ tab bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 type Tab = "payslips" | "taxcerts" | "expenses" | "opcosts";
 
-// ── main page ──────────────────────────────────────────────────────────────
+// â”€â”€ main page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function AccountingPage() {
   const { t } = useI18n();
@@ -102,7 +102,7 @@ export function AccountingPage() {
       </div>
 
       {/* Tab bar */}
-      <div className="flex gap-1 rounded-xl border border-white/10 bg-card p-1">
+      <div className="flex gap-1 rounded-xl border bg-card p-1">
         {TABS.map((tb) => (
           <button
             key={tb.id}
@@ -110,8 +110,8 @@ export function AccountingPage() {
             className={cn(
               "flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
               tab === tb.id
-                ? "bg-white/10 text-white"
-                : "text-muted-foreground hover:bg-white/5 hover:text-white",
+                ? "bg-primary text-white shadow-sm"
+                : "text-muted-foreground hover:bg-gray-100 hover:text-foreground",
             )}
           >
             {tb.label}
@@ -127,7 +127,7 @@ export function AccountingPage() {
   );
 }
 
-// ── Payslips ───────────────────────────────────────────────────────────────
+// â”€â”€ Payslips â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function PayslipsSection() {
   const { t } = useI18n();
@@ -168,7 +168,11 @@ function PayslipsSection() {
   }
 
   if (employees.length === 0) {
-    return <p className="text-sm text-muted-foreground">{t("accounting.payslips.noEmployees")}</p>;
+    return (
+      <p className="text-sm text-muted-foreground">
+        No employees found. Open any case, go to <strong>Work items</strong>, add a person and mark them as an employee — they will appear here.
+      </p>
+    );
   }
 
   return (
@@ -178,10 +182,10 @@ function PayslipsSection() {
         <YearSelect value={year} onChange={setYear} />
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-white/10">
+      <div className="overflow-x-auto rounded-xl border border-gray-200">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-white/10 bg-white/5">
+            <tr className="border-b border-gray-200 bg-white/5">
               <th className="px-4 py-2.5 text-start font-medium text-muted-foreground">
                 {t("accounting.payslips.employee")}
               </th>
@@ -194,7 +198,7 @@ function PayslipsSection() {
           </thead>
           <tbody>
             {employees.map((emp) => (
-              <tr key={emp.id} className="border-b border-white/5 hover:bg-white/3">
+              <tr key={emp.id} className="border-b border-gray-100 hover:bg-gray-50/50">
                 <td className="px-4 py-2.5 font-medium">{emp.name}</td>
                 {months.map((_, i) => {
                   const month = i + 1;
@@ -210,11 +214,11 @@ function PayslipsSection() {
                             "flex size-7 items-center justify-center rounded-lg border transition-colors",
                             slip?.received
                               ? "border-emerald-500/40 bg-emerald-500/20 text-emerald-400"
-                              : "border-white/10 bg-white/5 text-muted-foreground hover:border-white/20",
+                              : "border-gray-200 bg-white/5 text-muted-foreground hover:border-white/20",
                           )}
                           title={slip?.received ? "Mark as not received" : "Mark as received"}
                         >
-                          {slip?.received ? <Check className="size-3.5" /> : <span className="text-xs">–</span>}
+                          {slip?.received ? <Check className="size-3.5" /> : <span className="text-xs">â€“</span>}
                         </button>
                         {slip?.storage_path ? (
                           <FileLink storagePath={slip.storage_path} name={slip.original_filename} />
@@ -226,7 +230,7 @@ function PayslipsSection() {
                             )}
                             title="Upload payslip PDF"
                           >
-                            {isUploading ? "…" : <Upload className="size-3" />}
+                            {isUploading ? "â€¦" : <Upload className="size-3" />}
                             <input
                               type="file"
                               accept=".pdf,.jpg,.jpeg,.png"
@@ -252,7 +256,7 @@ function PayslipsSection() {
   );
 }
 
-// ── Tax Certs ──────────────────────────────────────────────────────────────
+// â”€â”€ Tax Certs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 type CertForm = {
   kind: string;
@@ -346,14 +350,14 @@ function TaxCertsSection() {
       </div>
 
       {showForm && (
-        <div className="rounded-xl border border-white/10 bg-card p-4 space-y-3">
+        <div className="rounded-xl border border-gray-200 bg-card p-4 space-y-3">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <div className="space-y-1">
               <Label>{t("accounting.taxCerts.kind")}</Label>
               <select
                 value={form.kind}
                 onChange={(e) => setForm((f) => ({ ...f, kind: e.target.value }))}
-                className="w-full rounded-lg border border-white/10 bg-background px-3 py-1.5 text-sm"
+                className="w-full rounded-lg border border-gray-200 bg-background px-3 py-1.5 text-sm"
               >
                 <option value="withholding">{t("accounting.taxCerts.kindWithholding")}</option>
                 <option value="form_101">{t("accounting.taxCerts.kindForm101")}</option>
@@ -399,10 +403,10 @@ function TaxCertsSection() {
       {certs.length === 0 && !showForm ? (
         <p className="text-sm text-muted-foreground">{t("accounting.taxCerts.noCerts")}</p>
       ) : (
-        <div className="rounded-xl border border-white/10 overflow-hidden">
+        <div className="rounded-xl border border-gray-200 overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-white/10 bg-white/5 text-xs text-muted-foreground">
+              <tr className="border-b border-gray-200 bg-white/5 text-xs text-muted-foreground">
                 <th className="px-4 py-2.5 text-start">{t("accounting.taxCerts.kind")}</th>
                 <th className="px-4 py-2.5 text-start">{t("accounting.year")}</th>
                 <th className="px-4 py-2.5 text-start">{t("accounting.taxCerts.validFrom")}</th>
@@ -415,12 +419,12 @@ function TaxCertsSection() {
             </thead>
             <tbody>
               {certs.map((c) => (
-                <tr key={c.id} className="border-b border-white/5 hover:bg-white/3">
+                <tr key={c.id} className="border-b border-gray-100 hover:bg-gray-50/50">
                   <td className="px-4 py-2.5">
                     <Badge className="bg-gray-100 text-gray-700 ring-1 ring-gray-200">{kindLabel(c.kind)}</Badge>
                   </td>
-                  <td className="px-4 py-2.5 text-muted-foreground">{c.year ?? "—"}</td>
-                  <td className="px-4 py-2.5 text-muted-foreground">{c.valid_from ?? "—"}</td>
+                  <td className="px-4 py-2.5 text-muted-foreground">{c.year ?? "â€”"}</td>
+                  <td className="px-4 py-2.5 text-muted-foreground">{c.valid_from ?? "â€”"}</td>
                   <td className="px-4 py-2.5">
                     {c.valid_to ? (
                       <span className={cn(
@@ -428,13 +432,13 @@ function TaxCertsSection() {
                           ? "text-red-400"
                           : "text-emerald-400",
                       )}>{c.valid_to}</span>
-                    ) : "—"}
+                    ) : "â€”"}
                   </td>
-                  <td className="px-4 py-2.5 text-muted-foreground">{c.rate != null ? `${c.rate}%` : "—"}</td>
+                  <td className="px-4 py-2.5 text-muted-foreground">{c.rate != null ? `${c.rate}%` : "â€”"}</td>
                   <td className="px-4 py-2.5">
                     <FileLink storagePath={c.storage_path} name={c.original_filename} />
                   </td>
-                  <td className="px-4 py-2.5 max-w-[200px] truncate text-muted-foreground">{c.notes ?? "—"}</td>
+                  <td className="px-4 py-2.5 max-w-[200px] truncate text-muted-foreground">{c.notes ?? "â€”"}</td>
                   <td className="px-4 py-2.5">
                     <div className="flex gap-1">
                       <Button size="sm" variant="outline" onClick={() => startEdit(c)}>
@@ -455,7 +459,7 @@ function TaxCertsSection() {
   );
 }
 
-// ── Expenses → Rivhit ──────────────────────────────────────────────────────
+// â”€â”€ Expenses â†’ Rivhit â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 type ExpFilter = "all" | "pending" | "done";
 
@@ -579,7 +583,7 @@ function ExpensesSection() {
                 "rounded-lg border px-3 py-1 text-xs transition-colors",
                 filter === fl.id
                   ? "border-sky-500/40 bg-sky-500/20 text-sky-300"
-                  : "border-white/10 text-muted-foreground hover:text-white",
+                  : "border-gray-200 text-muted-foreground hover:text-foreground",
               )}
             >
               {fl.label}
@@ -597,16 +601,16 @@ function ExpensesSection() {
       </div>
 
       {showForm && (
-        <div className="rounded-xl border border-white/10 bg-card p-4 space-y-3">
+        <div className="rounded-xl border border-gray-200 bg-card p-4 space-y-3">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <div className="space-y-1">
               <Label>{t("accounting.expenses.supplier")}</Label>
               <select
                 value={form.supplier_id}
                 onChange={(e) => setForm((f) => ({ ...f, supplier_id: e.target.value }))}
-                className="w-full rounded-lg border border-white/10 bg-background px-3 py-1.5 text-sm"
+                className="w-full rounded-lg border border-gray-200 bg-background px-3 py-1.5 text-sm"
               >
-                <option value="">— None —</option>
+                <option value="">â€” None â€”</option>
                 {counterparties.map((cp) => (
                   <option key={cp.id} value={cp.id}>{cp.name}</option>
                 ))}
@@ -656,10 +660,10 @@ function ExpensesSection() {
       {visible.length === 0 ? (
         <p className="text-sm text-muted-foreground">{t("accounting.expenses.noExpenses")}</p>
       ) : (
-        <div className="rounded-xl border border-white/10 overflow-hidden">
+        <div className="rounded-xl border border-gray-200 overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-white/10 bg-white/5 text-xs text-muted-foreground">
+              <tr className="border-b border-gray-200 bg-white/5 text-xs text-muted-foreground">
                 <th className="px-4 py-2.5 text-start">{t("accounting.expenses.supplier")}</th>
                 <th className="px-4 py-2.5 text-start">{t("accounting.expenses.invoiceNumber")}</th>
                 <th className="px-4 py-2.5 text-start">{t("accounting.amount")}</th>
@@ -672,16 +676,16 @@ function ExpensesSection() {
             </thead>
             <tbody>
               {visible.map((exp) => (
-                <tr key={exp.id} className="border-b border-white/5 hover:bg-white/3">
-                  <td className="px-4 py-2.5 font-medium">{exp.supplier?.name ?? "—"}</td>
-                  <td className="px-4 py-2.5 text-muted-foreground">{exp.invoice_number ?? "—"}</td>
+                <tr key={exp.id} className="border-b border-gray-100 hover:bg-gray-50/50">
+                  <td className="px-4 py-2.5 font-medium">{exp.supplier?.name ?? "â€”"}</td>
+                  <td className="px-4 py-2.5 text-muted-foreground">{exp.invoice_number ?? "â€”"}</td>
                   <td className="px-4 py-2.5">
                     {exp.amount != null
                       ? `${exp.amount.toLocaleString()} ${exp.currency ?? "ILS"}`
-                      : "—"}
+                      : "â€”"}
                   </td>
-                  <td className="px-4 py-2.5 text-muted-foreground">{exp.expense_date ?? "—"}</td>
-                  <td className="px-4 py-2.5 text-muted-foreground">{exp.category ?? "—"}</td>
+                  <td className="px-4 py-2.5 text-muted-foreground">{exp.expense_date ?? "â€”"}</td>
+                  <td className="px-4 py-2.5 text-muted-foreground">{exp.category ?? "â€”"}</td>
                   <td className="px-4 py-2.5">
                     <FileLink storagePath={exp.storage_path} name={exp.original_filename} />
                   </td>
@@ -722,7 +726,7 @@ function ExpensesSection() {
   );
 }
 
-// ── Operating Costs ────────────────────────────────────────────────────────
+// â”€â”€ Operating Costs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function OpCostsSection() {
   const { t } = useI18n();
@@ -803,10 +807,10 @@ function OpCostsSection() {
         <YearSelect value={year} onChange={setYear} />
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-white/10">
+      <div className="overflow-x-auto rounded-xl border border-gray-200">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-white/10 bg-white/5">
+            <tr className="border-b border-gray-200 bg-white/5">
               <th className="px-3 py-2.5 text-start text-xs font-medium text-muted-foreground sticky start-0 bg-card z-10 min-w-[60px]">
                 {/* month col */}
               </th>
@@ -815,7 +819,7 @@ function OpCostsSection() {
                   {cat.name}
                 </th>
               ))}
-              <th className="px-3 py-2.5 text-end text-xs font-bold text-white">
+              <th className="px-3 py-2.5 text-end text-xs font-bold text-foreground">
                 {t("accounting.opCosts.total")}
               </th>
             </tr>
@@ -824,7 +828,7 @@ function OpCostsSection() {
             {monthLabels.map((label, i) => {
               const month = i + 1;
               return (
-                <tr key={month} className="border-b border-white/5 hover:bg-white/3">
+                <tr key={month} className="border-b border-gray-100 hover:bg-gray-50/50">
                   <td className="px-3 py-1.5 text-xs font-medium text-muted-foreground sticky start-0 bg-card">
                     {label}
                   </td>
@@ -838,11 +842,11 @@ function OpCostsSection() {
                           step="1"
                           className={cn(
                             "w-20 rounded border border-transparent bg-transparent px-2 py-1 text-center text-sm transition-colors",
-                            "hover:border-white/10 focus:border-sky-500/50 focus:bg-white/5 focus:outline-none",
+                            "hover:border-gray-200 focus:border-sky-500/50 focus:bg-white/5 focus:outline-none",
                             isSaving && "opacity-50",
                           )}
                           value={displayValue(month, cat.id)}
-                          placeholder="—"
+                          placeholder="â€”"
                           disabled={isSaving}
                           onChange={(e) =>
                             setLocalValues((prev) => ({ ...prev, [key]: e.target.value }))
@@ -869,7 +873,7 @@ function OpCostsSection() {
                   {fmt(colTotal(cat.id))}
                 </td>
               ))}
-              <td className="px-3 py-2.5 text-end text-sm font-bold text-white">
+              <td className="px-3 py-2.5 text-end text-sm font-bold text-foreground">
                 {fmt(grandTotal())}
               </td>
             </tr>
