@@ -427,7 +427,7 @@ function GroupSection({
           {views.length}
         </span>
       </h2>
-      <div className="rounded-2xl border bg-card shadow-card overflow-hidden">
+      <div className="rounded-2xl border bg-card shadow-card">
         {views.map((v, i) => (
           <CaseRow
             key={v.case.id}
@@ -437,6 +437,7 @@ function GroupSection({
             t={t}
             tl={tl}
             onStatusChange={onStatusChange}
+            isFirst={i === 0}
             isLast={i === views.length - 1}
           />
         ))}
@@ -452,6 +453,7 @@ function CaseRow({
   t,
   tl,
   onStatusChange,
+  isFirst,
   isLast,
 }: {
   v: CaseView;
@@ -460,6 +462,7 @@ function CaseRow({
   t: (k: string, vars?: Record<string, string | number>) => string;
   tl: (l: { he: string; en: string }) => string;
   onStatusChange: (id: string, s: WorkStatus) => void;
+  isFirst: boolean;
   isLast: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -467,7 +470,7 @@ function CaseRow({
   const fmt = (n: number) => Math.round(n).toLocaleString(lang === "he" ? "he-IL" : "en-GB");
 
   return (
-    <div className={cn(!isLast && "border-b")}>
+    <div className={cn(!isLast && "border-b", isFirst && "rounded-t-2xl", isLast && !expanded && "rounded-b-2xl")}>
       <div className="flex flex-wrap items-center gap-3 px-4 py-3 hover:bg-gray-50/80">
         <button
           type="button"
