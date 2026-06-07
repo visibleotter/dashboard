@@ -209,7 +209,8 @@
     "empty": "אין משימות.",
     "noDate": "ללא תאריך",
     "done": "הושלמו",
-    "deleteConfirm": "למחוק את המשימה?"
+    "deleteConfirm": "למחוק את המשימה?",
+    "attachOrderNeedsCase": "בחרו תיק תחילה — הזמנה חייבת להיות משויכת לתיק."
   },
   "calendar": {
     "title": "לוח שנה",

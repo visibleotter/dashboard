@@ -36,17 +36,16 @@ export function TasksPage() {
   const [caseId, setCaseId] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // ── Add-order panel (optional, top-of-page) ───────────────────────────
+  // ── Optional order attached to the task being created ─────────────────
+  // Order is linked to the SAME case as the task. Requires a case to be picked.
   const [counterparties, setCounterparties] = useState<Counterparty[]>([]);
-  const [addingOrder, setAddingOrder] = useState(false);
-  const [oCaseId, setOCaseId] = useState("");
+  const [attachOrder, setAttachOrder] = useState(false);
   const [oWorkItems, setOWorkItems] = useState<WorkItemWithRefs[]>([]);
   const [oWorkItemId, setOWorkItemId] = useState("");
   const [oTitle, setOTitle] = useState("");
   const [oPrice, setOPrice] = useState("");
   const [oSupplier, setOSupplier] = useState("");
   const [oDate, setODate] = useState("");
-  const [savingOrder, setSavingOrder] = useState(false);
 
   useEffect(() => {
     listTasks().then(setTasks).catch((e) => setError(e.message));
@@ -54,39 +53,16 @@ export function TasksPage() {
     listCounterparties().then(setCounterparties).catch(() => setCounterparties([]));
   }, []);
 
-  // Refresh work items whenever the chosen case changes
+  // When the task's case changes, refresh the work-item picker for the order
   useEffect(() => {
-    if (!oCaseId) { setOWorkItems([]); setOWorkItemId(""); return; }
-    listWorkItems(oCaseId).then(setOWorkItems).catch(() => setOWorkItems([]));
     setOWorkItemId("");
-  }, [oCaseId]);
+    if (!caseId) { setOWorkItems([]); return; }
+    listWorkItems(caseId).then(setOWorkItems).catch(() => setOWorkItems([]));
+  }, [caseId]);
 
-  function resetOrderForm() {
-    setOCaseId(""); setOWorkItemId(""); setOTitle("");
-    setOPrice(""); setOSupplier(""); setODate("");
-    setAddingOrder(false);
-  }
-
-  async function handleAddOrder(e: React.FormEvent) {
-    e.preventDefault();
-    if (!oCaseId || !oTitle.trim()) return;
-    setSavingOrder(true);
-    setError(null);
-    try {
-      await createOrder({
-        case_id: oCaseId,
-        work_item_id: oWorkItemId || null,
-        title: oTitle.trim(),
-        price: oPrice ? Number(oPrice) : null,
-        supplier_id: oSupplier || null,
-        order_date: oDate || null,
-      });
-      resetOrderForm();
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setSavingOrder(false);
-    }
+  function resetAttachedOrder() {
+    setAttachOrder(false);
+    setOWorkItemId(""); setOTitle(""); setOPrice(""); setOSupplier(""); setODate("");
   }
 
   async function refresh() {
@@ -96,11 +72,27 @@ export function TasksPage() {
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     if (!text.trim()) return;
+    // If user enabled "attach order", a case + order title are required
+    if (attachOrder && (!caseId || !oTitle.trim())) {
+      setError(t("tasks.attachOrderNeedsCase"));
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
       await createTask({ text: text.trim(), priority, due_date: dueDate || null, case_id: caseId || null });
+      if (attachOrder && caseId && oTitle.trim()) {
+        await createOrder({
+          case_id: caseId,
+          work_item_id: oWorkItemId || null,
+          title: oTitle.trim(),
+          price: oPrice ? Number(oPrice) : null,
+          supplier_id: oSupplier || null,
+          order_date: oDate || null,
+        });
+      }
       setText(""); setPriority("med"); setDueDate(""); setCaseId("");
+      resetAttachedOrder();
       await refresh();
     } catch (e) {
       setError((e as Error).message);
@@ -164,132 +156,120 @@ export function TasksPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">{t("tasks.title")}</h1>
-          <p className="text-sm text-muted-foreground">{t("tasks.subtitle")}</p>
-        </div>
-        {!addingOrder && (
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setAddingOrder(true)}
-          >
-            <Plus className="size-4" /> {t("orders.add")}
-          </Button>
-        )}
+      <div>
+        <h1 className="text-2xl font-semibold">{t("tasks.title")}</h1>
+        <p className="text-sm text-muted-foreground">{t("tasks.subtitle")}</p>
       </div>
 
       {error && (
         <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>
       )}
 
-      {/* Optional Add-Order panel */}
-      {addingOrder && (
-        <form
-          onSubmit={handleAddOrder}
-          className="grid gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4"
-        >
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-foreground">{t("orders.add")}</h2>
-            <button
-              type="button"
-              onClick={resetOrderForm}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <X className="size-4" />
-            </button>
+      <form onSubmit={handleAdd} className="space-y-3 rounded-lg border bg-card p-4">
+        <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto_auto] sm:items-end">
+          <div className="grid gap-1.5">
+            <Label htmlFor="t-text">{t("tasks.task")}</Label>
+            <Input id="t-text" value={text} onChange={(e) => setText(e.target.value)} placeholder={t("tasks.taskPlaceholder")} />
           </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="grid gap-1.5">
-              <Label htmlFor="o-case">{t("tasks.caseOptional").replace(/\s*\(.+\)\s*$/, "")} *</Label>
-              <Select id="o-case" value={oCaseId} onChange={(e) => setOCaseId(e.target.value)} required>
-                <option value="">—</option>
-                {cases.map((c) => (
-                  <option key={c.id} value={c.id}>{c.title}</option>
-                ))}
-              </Select>
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="o-wi">{t("orders.workItem")}</Label>
-              <Select
-                id="o-wi"
-                value={oWorkItemId}
-                onChange={(e) => setOWorkItemId(e.target.value)}
-                disabled={!oCaseId || oWorkItems.length === 0}
-              >
-                <option value="">— {t("orders.unassigned")} —</option>
-                {oWorkItems.map((w) => (
-                  <option key={w.id} value={w.id}>{w.name}</option>
-                ))}
-              </Select>
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="o-title">{t("orders.name")} *</Label>
-              <Input id="o-title" value={oTitle} onChange={(e) => setOTitle(e.target.value)} required />
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="o-supplier">{t("orders.supplier")}</Label>
-              <Select id="o-supplier" value={oSupplier} onChange={(e) => setOSupplier(e.target.value)}>
-                <option value="">—</option>
-                {counterparties.map((cp) => (
-                  <option key={cp.id} value={cp.id}>{cp.name}</option>
-                ))}
-              </Select>
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="o-price">{t("orders.price")}</Label>
-              <Input id="o-price" type="number" step="0.01" dir="ltr" value={oPrice} onChange={(e) => setOPrice(e.target.value)} />
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="o-date">{t("orders.date")}</Label>
-              <Input id="o-date" type="date" value={oDate} onChange={(e) => setODate(e.target.value)} />
-            </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="t-prio">{t("tasks.priority")}</Label>
+            <Select id="t-prio" value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)}>
+              {ALL_TASK_PRIORITIES.map((p) => (
+                <option key={p} value={p}>
+                  {tl(taskPriorityLabel[p])}
+                </option>
+              ))}
+            </Select>
           </div>
-          <div className="flex items-center gap-2">
-            <Button type="submit" disabled={savingOrder || !oCaseId || !oTitle.trim()}>
-              {savingOrder ? t("common.saving") : t("common.add")}
-            </Button>
-            <Button type="button" variant="ghost" onClick={resetOrderForm}>
-              {t("common.cancel")}
-            </Button>
+          <div className="grid gap-1.5">
+            <Label htmlFor="t-due">{t("tasks.dueDate")}</Label>
+            <Input id="t-due" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
           </div>
-        </form>
-      )}
+          <div className="grid gap-1.5">
+            <Label htmlFor="t-case">{t("tasks.caseOptional")}</Label>
+            <Select id="t-case" value={caseId} onChange={(e) => setCaseId(e.target.value)} className="sm:w-44">
+              <option value="">{t("tasks.caseNone")}</option>
+              {cases.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.title}
+                </option>
+              ))}
+            </Select>
+          </div>
+        </div>
 
-      <form onSubmit={handleAdd} className="grid gap-3 rounded-lg border bg-card p-4 sm:grid-cols-[1fr_auto_auto_auto_auto] sm:items-end">
-        <div className="grid gap-1.5">
-          <Label htmlFor="t-text">{t("tasks.task")}</Label>
-          <Input id="t-text" value={text} onChange={(e) => setText(e.target.value)} placeholder={t("tasks.taskPlaceholder")} />
+        {/* Optional: attach an order to the same case */}
+        {!attachOrder ? (
+          <button
+            type="button"
+            onClick={() => setAttachOrder(true)}
+            className="inline-flex items-center gap-1 text-xs text-primary hover:underline disabled:text-muted-foreground disabled:no-underline"
+            disabled={!caseId}
+            title={!caseId ? t("tasks.attachOrderNeedsCase") : undefined}
+          >
+            <Plus className="size-3.5" /> {t("orders.attach")}
+          </button>
+        ) : (
+          <div className="space-y-2 rounded-md border border-primary/20 bg-primary/5 p-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-foreground">{t("orders.attach")}</span>
+              <button
+                type="button"
+                onClick={resetAttachedOrder}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="size-3.5" />
+              </button>
+            </div>
+            {!caseId ? (
+              <p className="text-xs text-amber-700">{t("tasks.attachOrderNeedsCase")}</p>
+            ) : (
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-1">
+                  <Label htmlFor="o-title" className="text-xs">{t("orders.name")} *</Label>
+                  <Input id="o-title" value={oTitle} onChange={(e) => setOTitle(e.target.value)} required />
+                </div>
+                <div className="grid gap-1">
+                  <Label htmlFor="o-wi" className="text-xs">{t("orders.workItem")}</Label>
+                  <Select
+                    id="o-wi"
+                    value={oWorkItemId}
+                    onChange={(e) => setOWorkItemId(e.target.value)}
+                    disabled={oWorkItems.length === 0}
+                  >
+                    <option value="">— {t("orders.unassigned")} —</option>
+                    {oWorkItems.map((w) => (
+                      <option key={w.id} value={w.id}>{w.name}</option>
+                    ))}
+                  </Select>
+                </div>
+                <div className="grid gap-1">
+                  <Label htmlFor="o-supplier" className="text-xs">{t("orders.supplier")}</Label>
+                  <Select id="o-supplier" value={oSupplier} onChange={(e) => setOSupplier(e.target.value)}>
+                    <option value="">—</option>
+                    {counterparties.map((cp) => (
+                      <option key={cp.id} value={cp.id}>{cp.name}</option>
+                    ))}
+                  </Select>
+                </div>
+                <div className="grid gap-1">
+                  <Label htmlFor="o-price" className="text-xs">{t("orders.price")}</Label>
+                  <Input id="o-price" type="number" step="0.01" dir="ltr" value={oPrice} onChange={(e) => setOPrice(e.target.value)} />
+                </div>
+                <div className="grid gap-1">
+                  <Label htmlFor="o-date" className="text-xs">{t("orders.date")}</Label>
+                  <Input id="o-date" type="date" value={oDate} onChange={(e) => setODate(e.target.value)} />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div>
+          <Button type="submit" disabled={saving || !text.trim() || (attachOrder && (!caseId || !oTitle.trim()))}>
+            {saving ? t("common.saving") : t("common.add")}
+          </Button>
         </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="t-prio">{t("tasks.priority")}</Label>
-          <Select id="t-prio" value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)}>
-            {ALL_TASK_PRIORITIES.map((p) => (
-              <option key={p} value={p}>
-                {tl(taskPriorityLabel[p])}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="t-due">{t("tasks.dueDate")}</Label>
-          <Input id="t-due" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-        </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="t-case">{t("tasks.caseOptional")}</Label>
-          <Select id="t-case" value={caseId} onChange={(e) => setCaseId(e.target.value)} className="sm:w-44">
-            <option value="">{t("tasks.caseNone")}</option>
-            {cases.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.title}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <Button type="submit" disabled={saving || !text.trim()}>
-          {saving ? t("common.saving") : t("common.add")}
-        </Button>
       </form>
 
       {tasks === null && <p className="text-sm text-muted-foreground">{t("common.loading")}</p>}

@@ -209,7 +209,8 @@
     "empty": "No tasks.",
     "noDate": "No date",
     "done": "Done",
-    "deleteConfirm": "Delete this task?"
+    "deleteConfirm": "Delete this task?",
+    "attachOrderNeedsCase": "Pick a case first — orders must belong to a case."
   },
   "calendar": {
     "title": "Calendar",
