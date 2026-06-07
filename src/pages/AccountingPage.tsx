@@ -528,7 +528,7 @@ function ExpensesSection() {
         const meta = await uploadAccountingFile("expenses", file);
         fileMeta = meta;
       }
-      const payload = {
+      const payload: import("@/lib/data").ExpenseInput = {
         supplier_id: form.supplier_id || null,
         invoice_number: form.invoice_number || null,
         amount: form.amount ? Number(form.amount) : null,
@@ -536,7 +536,7 @@ function ExpensesSection() {
         expense_date: form.expense_date || null,
         category: form.category || null,
         notes: form.notes || null,
-        ...fileMeta,
+        ...(fileMeta as { storage_path?: string; original_filename?: string; mime_type?: string | null }),
       };
       if (editId) {
         await updateExpense(editId, payload);
