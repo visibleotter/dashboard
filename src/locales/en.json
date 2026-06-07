@@ -104,7 +104,12 @@
     "empty": "No cases yet. Create the first one.",
     "child": "child case",
     "children": "{n} child cases",
-    "missingDocs": "{n} missing documents"
+    "missingDocs": "{n} missing documents",
+    "client": "Client / Supplier",
+    "dates": "Dates",
+    "budget": "Budget",
+    "editCase": "Edit case",
+    "saveChanges": "Save changes"
   },
   "caseForm": {
     "newTitle": "New case",
@@ -115,6 +120,7 @@
     "parent": "Parent case",
     "parentNone": "— None (top-level) —",
     "status": "Status",
+    "startDate": "Start date",
     "dueDate": "Due date",
     "currency": "Currency",
     "total": "Total amount",

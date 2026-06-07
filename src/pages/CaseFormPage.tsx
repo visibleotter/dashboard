@@ -52,6 +52,7 @@ export function CaseFormPage({ mode }: { mode: "create" | "edit" }) {
   const [status, setStatus] = useState<CaseStatus>("incomplete");
   const [currency, setCurrency] = useState("");
   const [totalAmount, setTotalAmount] = useState("");
+  const [startDate, setStartDate] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [notes, setNotes] = useState("");
   const [createdAt, setCreatedAt] = useState<string | null>(null);
@@ -90,6 +91,7 @@ export function CaseFormPage({ mode }: { mode: "create" | "edit" }) {
         setStatus(c.status);
         setCurrency(c.currency ?? "");
         setTotalAmount(c.total_amount != null ? String(c.total_amount) : "");
+        setStartDate(c.start_date ?? "");
         setDueDate(c.due_date ?? "");
         setNotes(c.notes ?? "");
         setCreatedAt(c.created_at);
@@ -127,6 +129,7 @@ export function CaseFormPage({ mode }: { mode: "create" | "edit" }) {
       status,
       currency: currency || null,
       total_amount: totalAmount.trim() === "" ? null : Number(totalAmount),
+      start_date: startDate || null,
       due_date: dueDate || null,
       notes: notes.trim() || null,
     };
@@ -256,6 +259,15 @@ export function CaseFormPage({ mode }: { mode: "create" | "edit" }) {
                 </option>
               ))}
             </Select>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="start_date">{t("caseForm.startDate")}</Label>
+            <Input
+              id="start_date"
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="due_date">{t("caseForm.dueDate")}</Label>

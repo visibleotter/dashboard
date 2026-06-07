@@ -153,6 +153,7 @@ export interface CaseInput {
   work_status?: WorkStatus;
   currency?: string | null;
   total_amount?: number | null;
+  start_date?: string | null;
   due_date?: string | null;
   notes?: string | null;
 }

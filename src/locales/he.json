@@ -104,7 +104,12 @@
     "empty": "אין תיקים עדיין. צרו את התיק הראשון.",
     "child": "תיק-בן",
     "children": "{n} תיקי-בן",
-    "missingDocs": "{n} מסמכים חסרים"
+    "missingDocs": "{n} מסמכים חסרים",
+    "client": "לקוח/ספק",
+    "dates": "תאריכים",
+    "budget": "תקציב",
+    "editCase": "עריכת תיק",
+    "saveChanges": "שמירת שינויים"
   },
   "caseForm": {
     "newTitle": "תיק חדש",
@@ -115,6 +120,7 @@
     "parent": "תיק אב",
     "parentNone": "— ללא (תיק עליון) —",
     "status": "סטטוס",
+    "startDate": "תאריך התחלה",
     "dueDate": "תאריך יעד",
     "currency": "מטבע",
     "total": "סכום",

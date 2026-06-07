@@ -14,7 +14,6 @@ import {
 import { useI18n } from "@/lib/i18n";
 import { formatDate } from "@/lib/dates";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
 import type { Counterparty } from "@/types/db";
 
 export function CaseWorkPreview({ caseId }: { caseId: string }) {
@@ -124,7 +123,7 @@ export function CaseWorkPreview({ caseId }: { caseId: string }) {
   if (error) return <p className="px-4 pb-3 text-xs text-destructive">{error}</p>;
   if (items === null) return <p className="px-4 pb-3 text-xs text-muted-foreground">{t("common.loading")}</p>;
 
-  const orderForm = (workItemId: string) => (
+  const orderForm = (_workItemId: string) => (
     <form onSubmit={handleAddOrder} className="ms-6 mt-1 flex flex-wrap items-center gap-1.5 rounded-lg border bg-gray-50 px-3 py-2">
       <input
         autoFocus
