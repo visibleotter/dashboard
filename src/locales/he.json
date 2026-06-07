@@ -14,13 +14,19 @@
     "view": "צפייה",
     "open": "פתח",
     "none": "ללא",
-    "all": "הכול"
+    "all": "הכול",
+    "edit": "עריכה"
+  },
+  "ordersPage": {
+    "subtitle": "כל ההזמנות בכל התיקים, מקובץ לפי פרויקט.",
+    "caseRequired": "תיק"
   },
   "nav": {
     "dashboard": "לוח בקרה",
     "cases": "תיקים",
     "calendar": "לוח שנה",
     "tasks": "משימות",
+    "orders": "הזמנות",
     "kb": "מדריך",
     "accounting": "חשבונאות",
     "signOut": "התנתקות"

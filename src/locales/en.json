@@ -14,13 +14,19 @@
     "view": "View",
     "open": "Open",
     "none": "None",
-    "all": "All"
+    "all": "All",
+    "edit": "Edit"
+  },
+  "ordersPage": {
+    "subtitle": "Every order across all cases, grouped by project.",
+    "caseRequired": "Case"
   },
   "nav": {
     "dashboard": "Dashboard",
     "cases": "Cases",
     "calendar": "Calendar",
     "tasks": "Tasks",
+    "orders": "Orders",
     "kb": "Handbook",
     "accounting": "Accounting",
     "signOut": "Sign out"

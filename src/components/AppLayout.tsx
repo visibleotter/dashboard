@@ -4,6 +4,7 @@ import {
   FolderKanban,
   CalendarDays,
   ListChecks,
+  ShoppingCart,
   BookOpen,
   Calculator,
   LogOut,
@@ -27,6 +28,7 @@ const NAV: NavItem[] = [
   { to: "/cases", icon: FolderKanban, key: "nav.cases" },
   { to: "/calendar", icon: CalendarDays, key: "nav.calendar" },
   { to: "/tasks", icon: ListChecks, key: "nav.tasks" },
+  { to: "/orders", icon: ShoppingCart, key: "nav.orders" },
   { to: "/kb", icon: BookOpen, key: "nav.kb" },
   { to: "/accounting", icon: Calculator, key: "nav.accounting" },
 ];

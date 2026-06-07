@@ -7,6 +7,7 @@ import { DashboardPage } from "@/pages/DashboardPage";
 import { CasesListPage } from "@/pages/CasesListPage";
 import { CaseFormPage } from "@/pages/CaseFormPage";
 import { TasksPage } from "@/pages/TasksPage";
+import { OrdersPage } from "@/pages/OrdersPage";
 import { CalendarPage } from "@/pages/CalendarPage";
 import { KnowledgeBasePage } from "@/pages/KnowledgeBasePage";
 import { AccountingPage } from "@/pages/AccountingPage";
@@ -41,6 +42,7 @@ function App() {
           <Route path="cases/:id" element={<CaseFormPage mode="edit" />} />
           <Route path="calendar" element={<CalendarPage />} />
           <Route path="tasks" element={<TasksPage />} />
+          <Route path="orders" element={<OrdersPage />} />
           <Route path="kb" element={<KnowledgeBasePage />} />
           <Route path="accounting" element={<AccountingPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />

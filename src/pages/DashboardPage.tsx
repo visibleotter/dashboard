@@ -98,7 +98,6 @@ export function DashboardPage() {
   const [statusFilter, setStatusFilter] = useState<WorkStatus | "all">("all");
   const [groupFilter, setGroupFilter] = useState<CaseGroup | "all">("all");
   const [spendByCase, setSpendByCase] = useState<Map<string, number>>(new Map());
-  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [reviewOpen, setReviewOpen] = useState(() => new Date().getDay() === 0);
 
   useEffect(() => {
@@ -126,16 +125,6 @@ export function DashboardPage() {
       return ws === "in_progress" || ws === "robot_on_way";
     }),
     [views],
-  );
-
-  // Project cases for budget picker
-  const projectCases = useMemo(() =>
-    views.filter((v) => v.case.case_type?.group === "project"),
-    [views],
-  );
-  const selectedProject = useMemo(() =>
-    projectCases.find((v) => v.case.id === selectedProjectId) ?? projectCases[0] ?? null,
-    [projectCases, selectedProjectId],
   );
 
   // Standalone tasks (no case_id)
@@ -294,33 +283,6 @@ export function DashboardPage() {
                 />
               );
             })
-          )}
-
-          {/* Project budget picker */}
-          {projectCases.length > 0 && (
-            <section className="rounded-2xl border bg-card shadow-card p-5">
-              <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                <h2 className="text-sm font-semibold text-foreground">{t("dashboard.projectBudget")}</h2>
-                <select
-                  value={selectedProjectId || selectedProject?.case.id || ""}
-                  onChange={(e) => setSelectedProjectId(e.target.value)}
-                  className="rounded-lg border bg-background px-3 py-1.5 text-sm text-foreground"
-                >
-                  {projectCases.map((v) => (
-                    <option key={v.case.id} value={v.case.id}>{v.case.title}</option>
-                  ))}
-                </select>
-              </div>
-              {selectedProject && (
-                <ProjectBudgetBar
-                  budget={selectedProject.case.total_amount ?? 0}
-                  spent={spendByCase.get(selectedProject.case.id) ?? 0}
-                  currency={selectedProject.case.currency ?? "ILS"}
-                  t={t}
-                  lang={lang}
-                />
-              )}
-            </section>
           )}
 
           {/* Standalone tasks */}
@@ -556,46 +518,3 @@ function CaseRow({
   );
 }
 
-// ── Project budget bar ─────────────────────────────────────────────────────
-
-function ProjectBudgetBar({
-  budget,
-  spent,
-  currency,
-  t,
-  lang,
-}: {
-  budget: number;
-  spent: number;
-  currency: string;
-  t: (k: string) => string;
-  lang: "he" | "en";
-}) {
-  const fmt = (n: number) => Math.round(n).toLocaleString(lang === "he" ? "he-IL" : "en-GB");
-  const pct = budget > 0 ? Math.min(100, (spent / budget) * 100) : 0;
-  const remaining = budget - spent;
-
-  return (
-    <div className="space-y-3">
-      <div className="flex justify-between text-sm">
-        <span className="text-muted-foreground">{t("spend.spent")} — <strong className="text-foreground">{currency} {fmt(spent)}</strong></span>
-        <span className="text-muted-foreground">{t("spend.budget")} — <strong className="text-foreground">{currency} {fmt(budget)}</strong></span>
-      </div>
-      <div className="h-2.5 w-full rounded-full bg-gray-100 overflow-hidden">
-        <div
-          className={cn(
-            "h-full rounded-full transition-all",
-            pct >= 90 ? "bg-red-400" : pct >= 70 ? "bg-amber-400" : "bg-green-400",
-          )}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-      <div className="flex justify-between text-xs text-muted-foreground">
-        <span>{Math.round(pct)}% {t("spend.used")}</span>
-        {remaining > 0 && (
-          <span>{t("spend.remaining")} {currency} {fmt(remaining)}</span>
-        )}
-      </div>
-    </div>
-  );
-}
