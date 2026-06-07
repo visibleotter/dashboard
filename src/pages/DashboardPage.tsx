@@ -185,36 +185,6 @@ export function DashboardPage() {
 
       {cases !== null && (
         <>
-          {/* Status filter bar */}
-          <div className="flex flex-wrap gap-1.5">
-            <FilterPill active={statusFilter === "all"} onClick={() => setStatusFilter("all")}>
-              {t("common.all")} <CountBubble n={views.length} />
-            </FilterPill>
-            {ALL_WORK_STATUSES.map((ws) => (
-              <FilterPill key={ws} active={statusFilter === ws} onClick={() => setStatusFilter(ws)} status={ws}>
-                {tl(workStatusLabel[ws])} <CountBubble n={countByStatus[ws]} />
-              </FilterPill>
-            ))}
-          </div>
-
-          {/* Group sub-filter */}
-          {statusFilter === "all" && (
-            <div className="flex flex-wrap gap-1.5">
-              <FilterPill small active={groupFilter === "all"} onClick={() => setGroupFilter("all")}>
-                {t("common.all")}
-              </FilterPill>
-              {GROUP_ORDER.map((g) => {
-                const n = views.filter((v) => v.case.case_type?.group === g).length;
-                if (!n) return null;
-                return (
-                  <FilterPill key={g} small active={groupFilter === g} onClick={() => setGroupFilter(g)}>
-                    {tl(groupLabel[g])}
-                  </FilterPill>
-                );
-              })}
-            </div>
-          )}
-
           {/* Weekly Review panel */}
           {reviewCases.length > 0 && (
             <section className="rounded-2xl border bg-card shadow-card">
@@ -261,6 +231,36 @@ export function DashboardPage() {
                 </div>
               )}
             </section>
+          )}
+
+          {/* Status filter bar */}
+          <div className="flex flex-wrap gap-1.5">
+            <FilterPill active={statusFilter === "all"} onClick={() => setStatusFilter("all")}>
+              {t("common.all")} <CountBubble n={views.length} />
+            </FilterPill>
+            {ALL_WORK_STATUSES.map((ws) => (
+              <FilterPill key={ws} active={statusFilter === ws} onClick={() => setStatusFilter(ws)} status={ws}>
+                {tl(workStatusLabel[ws])} <CountBubble n={countByStatus[ws]} />
+              </FilterPill>
+            ))}
+          </div>
+
+          {/* Group sub-filter */}
+          {statusFilter === "all" && (
+            <div className="flex flex-wrap gap-1.5">
+              <FilterPill small active={groupFilter === "all"} onClick={() => setGroupFilter("all")}>
+                {t("common.all")}
+              </FilterPill>
+              {GROUP_ORDER.map((g) => {
+                const n = views.filter((v) => v.case.case_type?.group === g).length;
+                if (!n) return null;
+                return (
+                  <FilterPill key={g} small active={groupFilter === g} onClick={() => setGroupFilter(g)}>
+                    {tl(groupLabel[g])}
+                  </FilterPill>
+                );
+              })}
+            </div>
           )}
 
           {/* Cases grouped by type */}
