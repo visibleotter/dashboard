@@ -90,7 +90,19 @@
     "workItem": "משימת עבודה",
     "unassigned": "ללא שיוך",
     "none": "אין הזמנות.",
-    "deleteConfirm": "למחוק את ההזמנה?"
+    "deleteConfirm": "למחוק את ההזמנה?",
+    "attach": "צרף הזמנה",
+    "pickExisting": "בחר קיימת",
+    "newOne": "חדשה",
+    "fromProject": "מתוך",
+    "editClick": "לחץ לעריכה",
+    "noOrdersYet": "אין הזמנות קיימות לבחירה."
+  },
+  "inlineTasks": {
+    "add": "+ משימה",
+    "addPlaceholder": "מה לעשות…",
+    "none": "אין משימות מקושרות.",
+    "deleteConfirm": "למחוק את המשימה?"
   },
   "upcoming": {
     "title": "משימות קרובות",

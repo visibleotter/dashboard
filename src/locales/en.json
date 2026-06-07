@@ -90,7 +90,19 @@
     "workItem": "Work item",
     "unassigned": "Unassigned",
     "none": "No orders.",
-    "deleteConfirm": "Delete this order?"
+    "deleteConfirm": "Delete this order?",
+    "attach": "Attach order",
+    "pickExisting": "Pick existing",
+    "newOne": "New",
+    "fromProject": "from",
+    "editClick": "Click to edit",
+    "noOrdersYet": "No existing orders to pick."
+  },
+  "inlineTasks": {
+    "add": "+ Task",
+    "addPlaceholder": "What to do…",
+    "none": "No tasks linked.",
+    "deleteConfirm": "Delete this task?"
   },
   "upcoming": {
     "title": "Upcoming tasks",

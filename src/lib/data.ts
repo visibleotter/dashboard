@@ -368,6 +368,19 @@ export async function deleteTask(id: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+/** Tasks scoped to a single case — used by the inline tasks list under the project row. */
+export async function listTasksForCase(caseId: string): Promise<TaskRow[]> {
+  return unwrap(
+    await supabase
+      .from("tasks")
+      .select("*")
+      .eq("case_id", caseId)
+      .order("done", { ascending: true })
+      .order("due_date", { ascending: true, nullsFirst: false })
+      .order("created_at", { ascending: false }),
+  );
+}
+
 // ---- calendar: every dated item across cases, milestones, tasks ----
 
 export type CalendarKind = "case" | "milestone" | "task";
@@ -534,6 +547,20 @@ export async function updateOrder(id: string, patch: Partial<Omit<OrderInput, "c
 export async function deleteOrder(id: string): Promise<void> {
   const { error } = await supabase.from("orders").delete().eq("id", id);
   if (error) throw new Error(error.message);
+}
+
+/**
+ * All orders across every case — used by the "attach existing order" picker.
+ * Picking an existing order CLONES its fields into a new row for the chosen
+ * work item; orders stay one-row-per-case (no schema change).
+ */
+export async function listAllOrders(): Promise<OrderWithRefs[]> {
+  return unwrap(
+    await supabase
+      .from("orders")
+      .select("*, supplier:counterparties(id, name), work_item:work_items(id, name)")
+      .order("order_date", { ascending: false, nullsFirst: false }),
+  );
 }
 
 /**
