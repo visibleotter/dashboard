@@ -14,17 +14,20 @@ import type { Database } from "@/types/db";
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  // Fail loud in dev so a missing .env is obvious rather than a silent runtime error.
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+
+if (!isSupabaseConfigured) {
+  // Don't crash the whole app (createClient throws on an empty URL). Render the login
+  // screen with a "not configured" notice instead of a black screen. On Vercel this means
+  // the VITE_ env vars weren't set at BUILD time — set them and redeploy.
   console.warn(
     "[supabase] Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY. " +
-      "Copy .env.example to .env and fill in your Supabase project values.",
+      "Set them in your .env (local) or Vercel env vars (production) and rebuild.",
   );
 }
 
+// Fall back to a syntactically-valid placeholder so createClient never throws at import.
 export const supabase = createClient<Database>(
-  supabaseUrl ?? "",
-  supabaseAnonKey ?? "",
+  supabaseUrl || "https://placeholder.supabase.co",
+  supabaseAnonKey || "placeholder-anon-key",
 );
-
-export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);

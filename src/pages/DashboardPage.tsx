@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { UpcomingTasks } from "@/components/UpcomingTasks";
 
 export function DashboardPage() {
-  const { t, tl } = useI18n();
+  const { t, tl, lang } = useI18n();
   const [cases, setCases] = useState<CaseWithDocs[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [groupFilter, setGroupFilter] = useState<CaseGroup | "all">("all");
@@ -106,7 +106,9 @@ export function DashboardPage() {
               {GROUP_ORDER.filter((g) => groupFilter === "all" || groupFilter === g).map((group) => {
                 const inGroup = views.filter((v) => v.case.case_type?.group === group);
                 if (inGroup.length === 0) return null;
-                return <GroupGaps key={group} group={group} views={inGroup} t={t} tl={tl} />;
+                return (
+                  <GroupGaps key={group} group={group} views={inGroup} spend={spendByCase} lang={lang} t={t} tl={tl} />
+                );
               })}
             </>
           )}
@@ -166,11 +168,15 @@ function StatCard({ label, value, tone = "neutral" }: { label: string; value: nu
 function GroupGaps({
   group,
   views,
+  spend,
+  lang,
   t,
   tl,
 }: {
   group: CaseGroup;
   views: CaseView[];
+  spend: Map<string, number>;
+  lang: "he" | "en";
   t: (k: string, v?: Record<string, string | number>) => string;
   tl: (l: { he: string; en: string }) => string;
 }) {
@@ -195,6 +201,12 @@ function GroupGaps({
                   {v.incompleteChildren > 0 && (
                     <Badge className="bg-amber-500/15 text-amber-300 ring-1 ring-amber-400/25">
                       {t("dashboard.incompleteChildren", { n: v.incompleteChildren })}
+                    </Badge>
+                  )}
+                  {(spend.get(v.case.id) ?? 0) > 0 && (
+                    <Badge className="bg-sky-500/15 text-sky-300 ring-1 ring-sky-400/25">
+                      {t("spend.spent")} ₪{Math.round(spend.get(v.case.id)!).toLocaleString(lang === "he" ? "he-IL" : "en-GB")}
+                      {v.case.total_amount ? ` / ₪${Math.round(v.case.total_amount).toLocaleString(lang === "he" ? "he-IL" : "en-GB")}` : ""}
                     </Badge>
                   )}
                 </div>
