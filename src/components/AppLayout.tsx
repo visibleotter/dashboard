@@ -29,8 +29,8 @@ const NAV: NavItem[] = [
   { to: "/calendar", icon: CalendarDays, key: "nav.calendar" },
   { to: "/tasks", icon: ListChecks, key: "nav.tasks" },
   { to: "/orders", icon: ShoppingCart, key: "nav.orders" },
-  { to: "/kb", icon: BookOpen, key: "nav.kb" },
   { to: "/accounting", icon: Calculator, key: "nav.accounting" },
+  { to: "/kb", icon: BookOpen, key: "nav.kb" },
 ];
 
 /* Vision-UI style shell: fixed glass sidebar + top bar + routed content. */
