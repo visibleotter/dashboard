@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { ChevronDown, ChevronLeft } from "lucide-react";
 import { listCasesWithDocs, listSpendByCase, type CaseWithDocs } from "@/lib/data";
 import { buildCaseViews, type CaseView } from "@/lib/completeness";
 import { useI18n } from "@/lib/i18n";
 import { SpendSummary } from "@/components/SpendSummary";
+import { CaseWorkPreview } from "@/components/CaseWorkPreview";
 import { GROUP_ORDER, docTypeLabel, groupLabel, statusBadgeClass, statusLabel } from "@/lib/labels";
 import type { CaseGroup } from "@/types/db";
 import { Badge } from "@/components/ui/badge";
@@ -187,52 +189,80 @@ function GroupGaps({
       </h2>
       <ul className="divide-y rounded-lg border bg-card">
         {views.map((v) => (
-          <li key={v.case.id}>
-            <Link
-              to={`/cases/${v.case.id}`}
-              className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 hover:bg-accent"
-            >
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="truncate font-medium">{v.case.title}</span>
-                  {v.case.parent_id && (
-                    <Badge className="bg-white/10 text-neutral-300">{t("cases.child")}</Badge>
-                  )}
-                  {v.incompleteChildren > 0 && (
-                    <Badge className="bg-amber-500/15 text-amber-300 ring-1 ring-amber-400/25">
-                      {t("dashboard.incompleteChildren", { n: v.incompleteChildren })}
-                    </Badge>
-                  )}
-                  {(spend.get(v.case.id) ?? 0) > 0 && (
-                    <Badge className="bg-sky-500/15 text-sky-300 ring-1 ring-sky-400/25">
-                      {t("spend.spent")} ₪{Math.round(spend.get(v.case.id)!).toLocaleString(lang === "he" ? "he-IL" : "en-GB")}
-                      {v.case.total_amount ? ` / ₪${Math.round(v.case.total_amount).toLocaleString(lang === "he" ? "he-IL" : "en-GB")}` : ""}
-                    </Badge>
-                  )}
-                </div>
-                {v.own.missing.length === 0 ? (
-                  <div className="text-sm text-emerald-300">{t("dashboard.allPresent")}</div>
-                ) : (
-                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                    <span className="text-xs text-muted-foreground">
-                      {t("dashboard.missingLabel", {
-                        satisfied: v.own.satisfied.length,
-                        total: v.own.expected.length,
-                      })}
-                    </span>
-                    {v.own.missing.map((dt) => (
-                      <Badge key={dt} className="bg-red-500/15 text-red-300 ring-1 ring-red-400/25">
-                        {tl(docTypeLabel[dt])}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <Badge className={statusBadgeClass[v.status]}>{tl(statusLabel[v.status])}</Badge>
-            </Link>
-          </li>
+          <ProjectRow key={v.case.id} v={v} spent={spend.get(v.case.id) ?? 0} lang={lang} t={t} tl={tl} />
         ))}
       </ul>
     </section>
+  );
+}
+
+function ProjectRow({
+  v,
+  spent,
+  lang,
+  t,
+  tl,
+}: {
+  v: CaseView;
+  spent: number;
+  lang: "he" | "en";
+  t: (k: string, vars?: Record<string, string | number>) => string;
+  tl: (l: { he: string; en: string }) => string;
+}) {
+  const [open, setOpen] = useState(false);
+  const money = (n: number) => Math.round(n).toLocaleString(lang === "he" ? "he-IL" : "en-GB");
+  const Chevron = open ? ChevronDown : ChevronLeft;
+
+  return (
+    <li>
+      <div className="flex flex-wrap items-center gap-3 px-4 py-3 hover:bg-accent/50">
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className="text-muted-foreground hover:text-foreground"
+          aria-label="expand"
+        >
+          <Chevron className="size-4" />
+        </button>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={() => setOpen((o) => !o)} className="truncate text-start font-medium hover:underline">
+              {v.case.title}
+            </button>
+            {v.case.parent_id && <Badge className="bg-white/10 text-neutral-300">{t("cases.child")}</Badge>}
+            {v.incompleteChildren > 0 && (
+              <Badge className="bg-amber-500/15 text-amber-300 ring-1 ring-amber-400/25">
+                {t("dashboard.incompleteChildren", { n: v.incompleteChildren })}
+              </Badge>
+            )}
+            {spent > 0 && (
+              <Badge className="bg-sky-500/15 text-sky-300 ring-1 ring-sky-400/25">
+                {t("spend.spent")} ₪{money(spent)}
+                {v.case.total_amount ? ` / ₪${money(v.case.total_amount)}` : ""}
+              </Badge>
+            )}
+          </div>
+          {v.own.missing.length === 0 ? (
+            <div className="text-sm text-emerald-300">{t("dashboard.allPresent")}</div>
+          ) : (
+            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+              <span className="text-xs text-muted-foreground">
+                {t("dashboard.missingLabel", { satisfied: v.own.satisfied.length, total: v.own.expected.length })}
+              </span>
+              {v.own.missing.map((dt) => (
+                <Badge key={dt} className="bg-red-500/15 text-red-300 ring-1 ring-red-400/25">
+                  {tl(docTypeLabel[dt])}
+                </Badge>
+              ))}
+            </div>
+          )}
+        </div>
+        <Badge className={statusBadgeClass[v.status]}>{tl(statusLabel[v.status])}</Badge>
+        <Link to={`/cases/${v.case.id}`} className="text-sm text-primary hover:underline">
+          {t("common.open")} ←
+        </Link>
+      </div>
+      {open && <CaseWorkPreview caseId={v.case.id} />}
+    </li>
   );
 }
