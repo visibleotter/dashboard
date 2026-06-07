@@ -141,6 +141,7 @@ export type TaskRow = {
   due_date: string | null;
   done: boolean;
   category: string | null;
+  notes: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -216,7 +216,9 @@
     "noDate": "ללא תאריך",
     "done": "הושלמו",
     "deleteConfirm": "למחוק את המשימה?",
-    "attachOrderNeedsCase": "בחרו תיק תחילה — הזמנה חייבת להיות משויכת לתיק."
+    "attachOrderNeedsCase": "בחרו תיק תחילה — הזמנה חייבת להיות משויכת לתיק.",
+    "notes": "הערות",
+    "notesPlaceholder": "הקשר, קישורים, החלטות…"
   },
   "calendar": {
     "title": "לוח שנה",

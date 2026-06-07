@@ -316,6 +316,11 @@ export function DashboardPage() {
                       <div className="text-sm font-medium text-foreground line-clamp-2">
                         {task.text}
                       </div>
+                      {task.notes && (
+                        <p className="text-xs text-muted-foreground line-clamp-3 whitespace-pre-wrap">
+                          {task.notes}
+                        </p>
+                      )}
                       <div className="flex flex-wrap items-center gap-1.5 text-xs">
                         <Badge className={taskPriorityLabel[task.priority].cls}>
                           {tl(taskPriorityLabel[task.priority])}
@@ -326,15 +331,13 @@ export function DashboardPage() {
                           </Badge>
                         )}
                       </div>
-                      <Button
+                      <button
                         type="button"
-                        size="sm"
-                        variant="outline"
-                        className="mt-auto self-start"
                         onClick={() => handleToggleTaskDone(task.id, true)}
+                        className="mt-auto inline-flex items-center gap-1 self-start rounded-md bg-green-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-green-700"
                       >
                         ✓ {t("tasks.done")}
-                      </Button>
+                      </button>
                     </div>
                   );
                 })}

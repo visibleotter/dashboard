@@ -30,11 +30,11 @@ export function urgencyOf(dateStr: string, now = new Date()): Urgency {
 export const URGENCY_ORDER: Urgency[] = ["overdue", "today", "soon", "upcoming", "later"];
 
 export const urgencyMeta: Record<Urgency, { he: string; en: string; cls: string; dot: string }> = {
-  overdue: { he: "באיחור", en: "Overdue", cls: "bg-red-500/15 text-red-300 ring-1 ring-red-400/25", dot: "bg-red-500" },
-  today: { he: "היום", en: "Today", cls: "bg-orange-500/15 text-orange-300 ring-1 ring-orange-400/25", dot: "bg-orange-500" },
-  soon: { he: "השבוע", en: "This week", cls: "bg-amber-500/15 text-amber-300 ring-1 ring-amber-400/25", dot: "bg-amber-500" },
-  upcoming: { he: "החודש", en: "This month", cls: "bg-sky-500/15 text-sky-300 ring-1 ring-sky-400/25", dot: "bg-sky-500" },
-  later: { he: "בהמשך", en: "Later", cls: "bg-white/10 text-neutral-300 ring-1 ring-white/15", dot: "bg-neutral-400" },
+  overdue: { he: "באיחור", en: "Overdue", cls: "bg-red-50 text-red-700 ring-1 ring-red-200", dot: "bg-red-500" },
+  today: { he: "היום", en: "Today", cls: "bg-orange-50 text-orange-700 ring-1 ring-orange-200", dot: "bg-orange-500" },
+  soon: { he: "השבוע", en: "This week", cls: "bg-amber-50 text-amber-700 ring-1 ring-amber-200", dot: "bg-amber-500" },
+  upcoming: { he: "החודש", en: "This month", cls: "bg-sky-50 text-sky-700 ring-1 ring-sky-200", dot: "bg-sky-500" },
+  later: { he: "בהמשך", en: "Later", cls: "bg-gray-100 text-gray-600 ring-1 ring-gray-200", dot: "bg-gray-400" },
 };
 
 export type Lang = "he" | "en";

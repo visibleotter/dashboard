@@ -216,7 +216,9 @@
     "noDate": "No date",
     "done": "Done",
     "deleteConfirm": "Delete this task?",
-    "attachOrderNeedsCase": "Pick a case first — orders must belong to a case."
+    "attachOrderNeedsCase": "Pick a case first — orders must belong to a case.",
+    "notes": "Notes",
+    "notesPlaceholder": "Context, links, decisions…"
   },
   "calendar": {
     "title": "Calendar",

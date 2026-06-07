@@ -352,6 +352,7 @@ export interface TaskInput {
   priority?: TaskPriority;
   due_date?: string | null;
   category?: string | null;
+  notes?: string | null;
   case_id?: string | null;
 }
 

@@ -34,6 +34,7 @@ export function TasksPage() {
   const [priority, setPriority] = useState<TaskPriority>("med");
   const [dueDate, setDueDate] = useState("");
   const [caseId, setCaseId] = useState("");
+  const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
 
   // ── Optional order attached to the task being created ─────────────────
@@ -80,7 +81,13 @@ export function TasksPage() {
     setSaving(true);
     setError(null);
     try {
-      await createTask({ text: text.trim(), priority, due_date: dueDate || null, case_id: caseId || null });
+      await createTask({
+        text: text.trim(),
+        priority,
+        due_date: dueDate || null,
+        case_id: caseId || null,
+        notes: notes.trim() || null,
+      });
       if (attachOrder && caseId && oTitle.trim()) {
         await createOrder({
           case_id: caseId,
@@ -91,7 +98,7 @@ export function TasksPage() {
           order_date: oDate || null,
         });
       }
-      setText(""); setPriority("med"); setDueDate(""); setCaseId("");
+      setText(""); setPriority("med"); setDueDate(""); setCaseId(""); setNotes("");
       resetAttachedOrder();
       await refresh();
     } catch (e) {
@@ -131,7 +138,10 @@ export function TasksPage() {
           <input type="checkbox" checked={task.done} onChange={() => toggle(task)} className="size-4" aria-label={t("tasks.done")} />
           <div className="min-w-0 flex-1">
             <div className={`text-sm ${task.done ? "text-muted-foreground line-through" : "font-medium"}`}>{task.text}</div>
-            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            {task.notes && (
+              <div className="mt-0.5 text-xs text-muted-foreground line-clamp-2">{task.notes}</div>
+            )}
+            <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               {task.due_date && (
                 <span>
                   {formatDate(task.due_date, lang)}
@@ -196,6 +206,16 @@ export function TasksPage() {
               ))}
             </Select>
           </div>
+        </div>
+
+        <div className="grid gap-1.5">
+          <Label htmlFor="t-notes">{t("tasks.notes")}</Label>
+          <Input
+            id="t-notes"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder={t("tasks.notesPlaceholder")}
+          />
         </div>
 
         {/* Optional: attach an order to the same case */}
