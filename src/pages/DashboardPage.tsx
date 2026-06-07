@@ -145,12 +145,18 @@ export function DashboardPage() {
   );
 
   async function handleStatusChange(caseId: string, newStatus: WorkStatus) {
+    // Optimistic update — patches the row in place so the weekly review,
+    // status pills and group sections all re-derive immediately.
     setCases((prev) =>
       prev?.map((c) =>
         c.id === caseId ? { ...c, work_status: newStatus } : c,
       ) ?? null,
     );
     await updateWorkStatus(caseId, newStatus);
+    // Authoritative refresh — guards against any drift between optimistic state
+    // and the DB (e.g. triggers, RLS rewrites, concurrent edits).
+    const fresh = await listCasesWithDocs();
+    setCases(fresh);
   }
 
   // Status filter counts
