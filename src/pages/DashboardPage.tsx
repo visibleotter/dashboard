@@ -5,10 +5,12 @@ import {
   listCasesWithDocs,
   listSpendByCase,
   listTasks,
+  updateTask,
   updateWorkStatus,
   type CaseWithDocs,
   type TaskWithCase,
 } from "@/lib/data";
+import { formatDate, relativeDays, urgencyMeta, urgencyOf } from "@/lib/dates";
 import { buildCaseViews, type CaseView } from "@/lib/completeness";
 import { useI18n } from "@/lib/i18n";
 import { CaseWorkPreview } from "@/components/CaseWorkPreview";
@@ -17,6 +19,7 @@ import {
   GROUP_ORDER,
   docTypeLabel,
   groupLabel,
+  taskPriorityLabel,
   workStatusBadgeClass,
   workStatusLabel,
 } from "@/lib/labels";
@@ -146,6 +149,11 @@ export function DashboardPage() {
     // and the DB (e.g. triggers, RLS rewrites, concurrent edits).
     const fresh = await listCasesWithDocs();
     setCases(fresh);
+  }
+
+  async function handleToggleTaskDone(taskId: string, done: boolean) {
+    setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, done } : t));
+    await updateTask(taskId, { done });
   }
 
   // Status filter counts
@@ -297,17 +305,40 @@ export function DashboardPage() {
                   {t("upcoming.all")}
                 </Link>
               </div>
-              <ul className="space-y-1.5">
-                {standaloneTasks.slice(0, 6).map((task) => (
-                  <li key={task.id} className="flex items-center gap-2 text-sm">
-                    <span className="size-1.5 shrink-0 rounded-full bg-primary/40" />
-                    <span className="text-foreground">{task.text}</span>
-                    {task.due_date && (
-                      <span className="ms-auto text-xs text-muted-foreground">{task.due_date}</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {standaloneTasks.slice(0, 6).map((task) => {
+                  const u = task.due_date ? urgencyOf(task.due_date) : null;
+                  return (
+                    <div
+                      key={task.id}
+                      className="group flex flex-col gap-2 rounded-xl border p-3 transition-colors hover:border-primary/30 hover:bg-primary/5"
+                    >
+                      <div className="text-sm font-medium text-foreground line-clamp-2">
+                        {task.text}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                        <Badge className={taskPriorityLabel[task.priority].cls}>
+                          {tl(taskPriorityLabel[task.priority])}
+                        </Badge>
+                        {task.due_date && u && (
+                          <Badge className={urgencyMeta[u].cls}>
+                            {formatDate(task.due_date, lang)} · {relativeDays(task.due_date, lang)}
+                          </Badge>
+                        )}
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="mt-auto self-start"
+                        onClick={() => handleToggleTaskDone(task.id, true)}
+                      >
+                        ✓ {t("tasks.done")}
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
             </section>
           )}
         </>
