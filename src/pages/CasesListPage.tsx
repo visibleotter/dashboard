@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { listCasesWithDocs, type CaseWithDocs } from "@/lib/data";
+import { Trash2 } from "lucide-react";
+import { deleteCase, listCasesWithDocs, type CaseWithDocs } from "@/lib/data";
 import { buildCaseViews, type CaseView } from "@/lib/completeness";
 import { useI18n } from "@/lib/i18n";
 import { GROUP_ORDER, groupLabel, statusBadgeClass, statusLabel } from "@/lib/labels";
@@ -14,10 +15,18 @@ export function CasesListPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    listCasesWithDocs()
-      .then(setCases)
-      .catch((e) => setError(e.message));
+    listCasesWithDocs().then(setCases).catch((e) => setError(e.message));
   }, []);
+
+  async function handleDelete(v: CaseView, e: React.MouseEvent) {
+    e.preventDefault();
+    const msg = v.children.length > 0
+      ? t("caseForm.deleteConfirmChildren", { n: v.children.length })
+      : t("caseForm.deleteConfirm");
+    if (!confirm(msg)) return;
+    await deleteCase(v.case.id);
+    setCases((prev) => prev?.filter((c) => c.id !== v.case.id) ?? null);
+  }
 
   const views = useMemo(() => (cases ? buildCaseViews(cases) : []), [cases]);
 
@@ -54,7 +63,7 @@ export function CasesListPage() {
         GROUP_ORDER.map((group) => {
           const inGroup = views.filter((v) => v.case.case_type?.group === group);
           if (inGroup.length === 0) return null;
-          return <GroupSection key={group} group={group} views={inGroup} t={t} tl={tl} />;
+          return <GroupSection key={group} group={group} views={inGroup} t={t} tl={tl} onDelete={handleDelete} />;
         })}
     </div>
   );
@@ -65,48 +74,58 @@ function GroupSection({
   views,
   t,
   tl,
+  onDelete,
 }: {
   group: CaseGroup;
   views: CaseView[];
   t: (k: string, v?: Record<string, string | number>) => string;
   tl: (l: { he: string; en: string }) => string;
+  onDelete: (v: CaseView, e: React.MouseEvent) => void;
 }) {
   return (
     <section>
-      <h2 className="mb-2 text-sm font-medium text-muted-foreground">
-        {tl(groupLabel[group])} <span className="text-muted-foreground/70">({views.length})</span>
+      <h2 className="mb-2 text-sm font-semibold text-foreground">
+        {tl(groupLabel[group])}{" "}
+        <span className="rounded-full bg-gray-100 px-2 py-0 text-xs font-normal text-muted-foreground">
+          {views.length}
+        </span>
       </h2>
-      <ul className="divide-y rounded-lg border bg-card">
+      <ul className="divide-y rounded-2xl border bg-card shadow-card overflow-hidden">
         {views.map((v) => (
-          <li key={v.case.id}>
-            <Link
-              to={`/cases/${v.case.id}`}
-              className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-accent"
-            >
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="truncate font-medium">{v.case.title}</span>
-                  {v.case.parent_id && (
-                    <Badge className="bg-white/10 text-neutral-300">{t("cases.child")}</Badge>
-                  )}
-                  {v.children.length > 0 && (
-                    <Badge className="bg-indigo-500/15 text-indigo-300 ring-1 ring-indigo-400/25">
-                      {t("cases.children", { n: v.children.length })}
-                    </Badge>
-                  )}
-                  {v.own.missing.length > 0 && (
-                    <Badge className="bg-red-500/15 text-red-300 ring-1 ring-red-400/25">
-                      {t("cases.missingDocs", { n: v.own.missing.length })}
-                    </Badge>
-                  )}
-                </div>
-                <div className="truncate text-sm text-muted-foreground">
-                  {v.case.case_type ? tl({ he: v.case.case_type.name_he, en: v.case.case_type.name_en }) : "—"}
-                  {v.case.counterparty ? ` · ${v.case.counterparty.name}` : ""}
-                </div>
+          <li key={v.case.id} className="group flex items-center gap-3 px-4 py-3 hover:bg-gray-50">
+            <Link to={`/cases/${v.case.id}`} className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="truncate font-semibold text-foreground group-hover:text-primary">
+                  {v.case.title}
+                </span>
+                {v.case.parent_id && (
+                  <Badge className="bg-gray-100 text-gray-500 ring-1 ring-gray-200">{t("cases.child")}</Badge>
+                )}
+                {v.children.length > 0 && (
+                  <Badge className="bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200">
+                    {t("cases.children", { n: v.children.length })}
+                  </Badge>
+                )}
+                {v.showMissingDocs && v.own.missing.length > 0 && (
+                  <Badge className="bg-red-50 text-red-600 ring-1 ring-red-200">
+                    {t("cases.missingDocs", { n: v.own.missing.length })}
+                  </Badge>
+                )}
               </div>
-              <Badge className={statusBadgeClass[v.status]}>{tl(statusLabel[v.status])}</Badge>
+              <div className="truncate text-sm text-muted-foreground">
+                {v.case.case_type ? tl({ he: v.case.case_type.name_he, en: v.case.case_type.name_en }) : "—"}
+                {v.case.counterparty ? ` · ${v.case.counterparty.name}` : ""}
+              </div>
             </Link>
+            <Badge className={statusBadgeClass[v.status]}>{tl(statusLabel[v.status])}</Badge>
+            <button
+              type="button"
+              onClick={(e) => onDelete(v, e)}
+              className="hidden shrink-0 text-muted-foreground hover:text-red-500 group-hover:inline-flex"
+              title={t("caseForm.deleteConfirm")}
+            >
+              <Trash2 className="size-4" />
+            </button>
           </li>
         ))}
       </ul>
