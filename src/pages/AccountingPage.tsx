@@ -417,7 +417,7 @@ function TaxCertsSection() {
               {certs.map((c) => (
                 <tr key={c.id} className="border-b border-white/5 hover:bg-white/3">
                   <td className="px-4 py-2.5">
-                    <Badge variant="secondary">{kindLabel(c.kind)}</Badge>
+                    <Badge className="bg-gray-100 text-gray-700 ring-1 ring-gray-200">{kindLabel(c.kind)}</Badge>
                   </td>
                   <td className="px-4 py-2.5 text-muted-foreground">{c.year ?? "—"}</td>
                   <td className="px-4 py-2.5 text-muted-foreground">{c.valid_from ?? "—"}</td>
