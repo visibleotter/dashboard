@@ -31,7 +31,6 @@ import { MilestonesSection } from "@/components/MilestonesSection";
 import { CaseTimeline } from "@/components/CaseTimeline";
 import { SpendSummary } from "@/components/SpendSummary";
 import { WorkItemsSection } from "@/components/WorkItemsSection";
-import { OrdersSection } from "@/components/OrdersSection";
 
 const CURRENCIES = ["ILS", "USD", "CNY", "EUR"];
 
@@ -57,8 +56,7 @@ export function CaseFormPage({ mode }: { mode: "create" | "edit" }) {
   const [notes, setNotes] = useState("");
   const [createdAt, setCreatedAt] = useState<string | null>(null);
 
-  const [orderSpent, setOrderSpent] = useState(0);
-  const [workCost, setWorkCost] = useState(0);
+  const [spent, setSpent] = useState(0);
 
   const [loading, setLoading] = useState(mode === "edit");
   const [saving, setSaving] = useState(false);
@@ -314,14 +312,12 @@ export function CaseFormPage({ mode }: { mode: "create" | "edit" }) {
       {mode === "edit" && id && (
         <SpendSummary
           budget={totalAmount.trim() === "" ? null : Number(totalAmount)}
-          spent={orderSpent + workCost}
+          spent={spent}
           currency={currency || "ILS"}
         />
       )}
 
-      {mode === "edit" && id && <WorkItemsSection caseId={id} onCostChange={setWorkCost} />}
-
-      {mode === "edit" && id && <OrdersSection caseId={id} onTotalChange={setOrderSpent} />}
+      {mode === "edit" && id && <WorkItemsSection caseId={id} onSpentChange={setSpent} />}
 
       {mode === "edit" && id && <MilestonesSection caseId={id} />}
 
