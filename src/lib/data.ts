@@ -414,18 +414,202 @@ export async function updatePaymentLinkage(
   return unwrap(await supabase.from("payments").update(patch).eq("id", id).select("*").single());
 }
 
-/** Calls the Vercel API route that pulls fresh rows from the Google Sheet. */
-export async function syncPaymentsFromSheet(): Promise<{ upserted: number; deleted: number }> {
-  const { data: session } = await supabase.auth.getSession();
-  const token = session.session?.access_token;
-  if (!token) throw new Error("Not signed in");
-  const res = await fetch("/api/sync-payments", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  const body = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(body.error ?? `Sync failed (${res.status})`);
-  return body;
+// ── Payments import: CSV/TSV paste from the CashFlow sheet ─────────────────
+// No Google integration — the sheet is exported manually (copy / save as CSV).
+// Expected column order (matches CashFlow_9):
+//   Date Opened, Due Date, Payment Received, Invoice Number, Finance,
+//   Price Before VAT, Price After VAT, Remain, Currency, Status, Info, Client
+// A "header row" is optional; we detect & skip one if its first cell isn't a date.
+
+export interface ImportOptions {
+  /** If true, delete payments whose hash isn't in this import (full mirror). */
+  replaceAll?: boolean;
+}
+
+export async function importPaymentsFromCsv(
+  text: string,
+  opts: ImportOptions = {},
+): Promise<{ upserted: number; deleted: number; skipped: number }> {
+  const allRows = parseDelimited(text);
+  // Skip a header row if its first cell isn't parseable as a date.
+  const startsWithHeader = allRows.length > 0 && parseSheetDate(allRows[0]?.[0]) === null;
+  const dataRows = startsWithHeader ? allRows.slice(1) : allRows;
+
+  const seen = new Set<string>();
+  type Row = {
+    sheet_row_hash: string;
+    sheet_row_num: number;
+    date_opened: string | null;
+    due_date: string | null;
+    payment_received: string | null;
+    invoice_number: string | null;
+    direction: PaymentDirection;
+    price_before_vat: number | null;
+    price_after_vat: number | null;
+    remain: number | null;
+    currency: string;
+    status: PaymentStatus | null;
+    info: string | null;
+    client_raw: string | null;
+    synced_at: string;
+  };
+  const upserts: Row[] = [];
+  const now = new Date().toISOString();
+  let skipped = 0;
+
+  for (let i = 0; i < dataRows.length; i++) {
+    const r = dataRows[i] ?? [];
+    const [
+      dateOpened, dueDate, paymentReceived, invoiceNumber,
+      financeRaw, priceBeforeVat, priceAfterVat, remain,
+      currency, statusRaw, info, client,
+    ] = r;
+
+    // skip blanks
+    if (![dateOpened, dueDate, invoiceNumber, client, info].some((v) => v && String(v).trim())) {
+      skipped++;
+      continue;
+    }
+    // Only the lines with at least a date and a direction are useful.
+    const dDue = parseSheetDate(dueDate);
+    const dOpen = parseSheetDate(dateOpened);
+    if (!dDue && !dOpen) { skipped++; continue; }
+
+    const body = {
+      sheet_row_num: (startsWithHeader ? i + 2 : i + 1),
+      date_opened: dOpen,
+      due_date: dDue,
+      payment_received: parseSheetDate(paymentReceived),
+      invoice_number: cleanText(invoiceNumber),
+      direction: parseDirection(financeRaw),
+      price_before_vat: parseAmount(priceBeforeVat),
+      price_after_vat: parseAmount(priceAfterVat),
+      remain: parseAmount(remain),
+      currency: (cleanText(currency) ?? "ILS").toUpperCase(),
+      status: parseStatus(statusRaw),
+      info: cleanText(info),
+      client_raw: cleanText(client),
+    };
+    const sheet_row_hash = await sha1Hex(JSON.stringify(body));
+    if (seen.has(sheet_row_hash)) { skipped++; continue; }
+    seen.add(sheet_row_hash);
+    upserts.push({ ...body, sheet_row_hash, synced_at: now });
+  }
+
+  let upserted = 0;
+  if (upserts.length > 0) {
+    const { error } = await supabase
+      .from("payments")
+      .upsert(upserts, { onConflict: "sheet_row_hash", ignoreDuplicates: false });
+    if (error) throw new Error(error.message);
+    upserted = upserts.length;
+  }
+
+  let deleted = 0;
+  if (opts.replaceAll) {
+    const { data: existing, error: selErr } = await supabase
+      .from("payments")
+      .select("id, sheet_row_hash");
+    if (selErr) throw new Error(selErr.message);
+    const orphans = (existing ?? []).filter((r) => !seen.has(r.sheet_row_hash));
+    if (orphans.length > 0) {
+      const { error: delErr } = await supabase
+        .from("payments")
+        .delete()
+        .in("id", orphans.map((r) => r.id));
+      if (delErr) throw new Error(delErr.message);
+      deleted = orphans.length;
+    }
+  }
+
+  return { upserted, deleted, skipped };
+}
+
+// --- CSV / TSV parser (RFC4180-ish, autodetects tab vs comma) -------------
+function parseDelimited(text: string): string[][] {
+  if (!text.trim()) return [];
+  // Find first non-empty line to detect the delimiter
+  const sample = text.split(/\r?\n/).find((l) => l.length > 0) ?? "";
+  const tabs = (sample.match(/\t/g) ?? []).length;
+  const commas = (sample.match(/,/g) ?? []).length;
+  const delim = tabs >= commas ? "\t" : ",";
+
+  const rows: string[][] = [];
+  let field = "";
+  let row: string[] = [];
+  let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; }
+        else inQuotes = false;
+      } else field += ch;
+    } else {
+      if (ch === '"') inQuotes = true;
+      else if (ch === delim) { row.push(field); field = ""; }
+      else if (ch === "\n") { row.push(field); rows.push(row); row = []; field = ""; }
+      else if (ch === "\r") { /* swallow */ }
+      else field += ch;
+    }
+  }
+  if (field.length > 0 || row.length > 0) { row.push(field); rows.push(row); }
+  return rows.filter((r) => r.some((c) => c && c.trim()));
+}
+
+function cleanText(v: unknown): string | null {
+  if (v == null) return null;
+  const s = String(v).trim();
+  return s ? s : null;
+}
+
+function parseSheetDate(v: unknown): string | null {
+  if (v == null) return null;
+  const s = String(v).trim();
+  if (!s) return null;
+  // DD/MM/YYYY (the format in CashFlow_9)
+  let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m) return `${m[3]}-${pad2(m[2])}-${pad2(m[1])}`;
+  // YYYY-MM-DD
+  m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (m) return `${m[1]}-${pad2(m[2])}-${pad2(m[3])}`;
+  // DD-MM-YYYY
+  m = s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if (m) return `${m[3]}-${pad2(m[2])}-${pad2(m[1])}`;
+  return null;
+}
+
+function pad2(s: string): string { return s.length === 1 ? `0${s}` : s; }
+
+function parseDirection(v: unknown): PaymentDirection {
+  const s = String(v ?? "").toLowerCase();
+  if (s.startsWith("inc") || s.includes("הכנס")) return "income";
+  return "outcome";
+}
+
+function parseStatus(v: unknown): PaymentStatus | null {
+  const s = String(v ?? "").toLowerCase().trim();
+  if (!s) return null;
+  if (s.includes("not") || s.includes("לא")) return "not_paid";
+  if (s === "paid" || s.includes("paid") || s.includes("שולם")) return "paid";
+  return null;
+}
+
+function parseAmount(v: unknown): number | null {
+  if (v == null || v === "") return null;
+  if (typeof v === "number") return Number.isFinite(v) ? v : null;
+  const cleaned = String(v).replace(/[₪$€,]/g, "").replace(/\s/g, "").trim();
+  if (!cleaned) return null;
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : null;
+}
+
+async function sha1Hex(s: string): Promise<string> {
+  const buf = new TextEncoder().encode(s);
+  const digest = await crypto.subtle.digest("SHA-1", buf);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 // ---- calendar: every dated item across cases, milestones, tasks, payments ----

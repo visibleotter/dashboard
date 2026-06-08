@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { RefreshCw, ArrowDownCircle, ArrowUpCircle, Link2 } from "lucide-react";
+import { Upload, ArrowDownCircle, ArrowUpCircle, Link2, X } from "lucide-react";
 import {
+  importPaymentsFromCsv,
   listCases,
   listCounterparties,
   listPayments,
-  syncPaymentsFromSheet,
   updatePaymentLinkage,
   type CaseWithRelations,
   type PaymentWithRefs,
@@ -29,7 +29,11 @@ export function PaymentsPage() {
   const [dir, setDir] = useState<DirFilter>("all");
   const [status, setStatus] = useState<StatusFilter>("all");
 
-  const [syncing, setSyncing] = useState(false);
+  // Import modal state
+  const [showImport, setShowImport] = useState(false);
+  const [csvText, setCsvText] = useState("");
+  const [replaceAll, setReplaceAll] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
 
   useEffect(() => {
@@ -40,18 +44,29 @@ export function PaymentsPage() {
 
   async function refresh() { setRows(await listPayments()); }
 
-  async function handleSync() {
-    setSyncing(true);
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    f.text().then((txt) => setCsvText(txt)).catch((err) => setError((err as Error).message));
+  }
+
+  async function handleImport() {
+    if (!csvText.trim()) return;
+    setImporting(true);
     setError(null);
     setSyncResult(null);
     try {
-      const r = await syncPaymentsFromSheet();
-      setSyncResult(t("payments.synced", { upserted: r.upserted, deleted: r.deleted }));
+      const r = await importPaymentsFromCsv(csvText, { replaceAll });
+      setSyncResult(
+        t("payments.imported", { upserted: r.upserted, deleted: r.deleted, skipped: r.skipped }),
+      );
+      setCsvText("");
+      setShowImport(false);
       await refresh();
     } catch (e) {
       setError((e as Error).message);
     } finally {
-      setSyncing(false);
+      setImporting(false);
     }
   }
 
@@ -94,11 +109,67 @@ export function PaymentsPage() {
           <h1 className="text-2xl font-semibold">{t("payments.title")}</h1>
           <p className="text-sm text-muted-foreground">{t("payments.subtitle")}</p>
         </div>
-        <Button onClick={handleSync} disabled={syncing}>
-          <RefreshCw className={`size-4 ${syncing ? "animate-spin" : ""}`} />
-          {syncing ? t("payments.syncing") : t("payments.syncFromSheet")}
+        <Button onClick={() => setShowImport(true)}>
+          <Upload className="size-4" />
+          {t("payments.importCsv")}
         </Button>
       </div>
+
+      {/* Import modal */}
+      {showImport && (
+        <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/30 p-4" onClick={() => !importing && setShowImport(false)}>
+          <div
+            className="w-full max-w-2xl space-y-3 rounded-2xl border bg-card p-5 shadow-card"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-foreground">{t("payments.importCsv")}</h2>
+              <button
+                type="button"
+                onClick={() => setShowImport(false)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground whitespace-pre-line">
+              {t("payments.importHelp")}
+            </p>
+            <div className="flex items-center gap-2 text-xs">
+              <label className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-muted-foreground hover:text-foreground">
+                <Upload className="size-3.5" />
+                {t("payments.uploadFile")}
+                <input type="file" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values" className="hidden" onChange={handleFile} />
+              </label>
+              <label className="ms-auto inline-flex items-center gap-1.5 text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={replaceAll}
+                  onChange={(e) => setReplaceAll(e.target.checked)}
+                  className="size-3.5 accent-primary"
+                />
+                {t("payments.replaceAll")}
+              </label>
+            </div>
+            <textarea
+              value={csvText}
+              onChange={(e) => setCsvText(e.target.value)}
+              placeholder={t("payments.pastePlaceholder")}
+              rows={10}
+              className="w-full rounded-md border border-gray-200 bg-white p-2 text-xs font-mono text-foreground focus:outline-none focus:ring-1 focus:ring-primary/40"
+              dir="ltr"
+            />
+            <div className="flex items-center justify-end gap-2">
+              <Button variant="ghost" onClick={() => setShowImport(false)} disabled={importing}>
+                {t("common.cancel")}
+              </Button>
+              <Button onClick={handleImport} disabled={importing || !csvText.trim()}>
+                {importing ? t("common.saving") : t("common.add")}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {error && (
         <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>
