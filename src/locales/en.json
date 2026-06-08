@@ -71,6 +71,27 @@
     "prev": "Previous page",
     "next": "Next page"
   },
+  "analytics": {
+    "title": "Cash flow analytics",
+    "year": "Year",
+    "allTime": "All time",
+    "empty": "No payments for the selected period.",
+    "monthlyCashFlow": "Monthly cash flow (by due date)",
+    "paidVsOpen": "Paid vs Open",
+    "incomeCorridor": "Income corridor (open income, by days to due)",
+    "overdue": "Overdue",
+    "bucket": "Bucket",
+    "count": "Count",
+    "sum": "Sum",
+    "invoices": "Invoices",
+    "total": "Total",
+    "corridor": {
+      "0_7": "0–7 days",
+      "8_30": "8–30 days",
+      "31_60": "31–60 days",
+      "60p": ">60 days"
+    }
+  },
   "nav": {
     "dashboard": "Dashboard",
     "cases": "Cases",

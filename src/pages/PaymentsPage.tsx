@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Chip } from "@/components/ui/chip";
 import { IconButton } from "@/components/ui/icon-button";
+import { PaymentsAnalytics } from "@/components/PaymentsAnalytics";
 
 type DirFilter = "all" | PaymentDirection;
 type StatusFilter = "all" | PaymentStatus;
@@ -224,6 +225,9 @@ export function PaymentsPage() {
         <TotalCard label={t("payments.totalOutcome")} value={money(totals.outcome)} tone="red" icon={<ArrowUpCircle className="size-5" />} />
         <TotalCard label={t("payments.openOutcome")} value={money(totals.openOutcome)} tone="amber" icon={<ArrowUpCircle className="size-5" />} />
       </div>
+
+      {/* Analytics — cash-flow chart, donuts, income corridor */}
+      <PaymentsAnalytics />
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">

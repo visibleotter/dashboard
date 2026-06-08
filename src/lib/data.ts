@@ -673,6 +673,20 @@ export async function listPayments(filters: PaymentFilters = {}): Promise<Paymen
   return unwrap(await q.order("due_date", { ascending: true, nullsFirst: false }));
 }
 
+/**
+ * Lean payment fetch for analytics — minimal columns, optional year scope.
+ * Year is matched against `due_date` (matches the Sheet's Cash Flow pivot).
+ */
+export async function listPaymentsForAnalytics(year?: number | null): Promise<Payment[]> {
+  let q = supabase
+    .from("payments")
+    .select("id, direction, status, due_date, payment_received, price_after_vat, currency, invoice_number");
+  if (year) {
+    q = q.gte("due_date", `${year}-01-01`).lt("due_date", `${year + 1}-01-01`);
+  }
+  return unwrap(await q.order("due_date", { ascending: true, nullsFirst: false })) as Payment[];
+}
+
 /** Update the in-app linkage (case_id / counterparty_id). Sheet fields are read-only. */
 export async function updatePaymentLinkage(
   id: string,
