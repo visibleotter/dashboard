@@ -895,6 +895,8 @@ export interface CalendarItem {
   /** Money amount for payment kinds; undefined otherwise. */
   amount?: number | null;
   currency?: string | null;
+  /** Invoice number for payment kinds. */
+  invoiceNumber?: string | null;
 }
 
 /** Merge all forward/back-looking due dates into one sorted list (brief §6 calendar). */
@@ -911,7 +913,7 @@ export async function listCalendarItems(): Promise<CalendarItem[]> {
       .not("due_date", "is", null),
     supabase
       .from("payments")
-      .select("id, due_date, direction, status, price_after_vat, currency, client_raw, info, case:cases(id, title)")
+      .select("id, due_date, direction, status, price_after_vat, currency, client_raw, invoice_number, info, case:cases(id, title)")
       .not("due_date", "is", null),
   ]);
   for (const r of [cases, milestones, tasks, payments]) {
@@ -964,6 +966,7 @@ export async function listCalendarItems(): Promise<CalendarItem[]> {
       price_after_vat: number | null;
       currency: string | null;
       client_raw: string | null;
+      invoice_number: string | null;
       info: string | null;
       case: { id: string; title: string } | null;
     };
@@ -979,6 +982,7 @@ export async function listCalendarItems(): Promise<CalendarItem[]> {
       resolved: pp.status === "paid",
       amount: pp.price_after_vat,
       currency: pp.currency,
+      invoiceNumber: pp.invoice_number,
     });
   }
 

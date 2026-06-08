@@ -112,16 +112,25 @@ export function CalendarPage() {
                       </Link>
                     )}
                   </div>
-                  {(it.kind === "income" || it.kind === "outcome") && it.amount != null && (
-                    <span
-                      className={`text-sm font-medium ${
-                        it.kind === "income" ? "text-emerald-700" : "text-red-700"
-                      }`}
-                      dir="ltr"
-                    >
-                      {it.kind === "income" ? "+" : "−"}
-                      {Math.round(it.amount).toLocaleString(lang === "he" ? "he-IL" : "en-GB")} {it.currency ?? "ILS"}
-                    </span>
+                  {(it.kind === "income" || it.kind === "outcome") && (
+                    <div className="flex flex-col items-end text-end">
+                      {it.amount != null && (
+                        <span
+                          className={`text-sm font-medium ${
+                            it.kind === "income" ? "text-emerald-700" : "text-red-700"
+                          }`}
+                          dir="ltr"
+                        >
+                          {it.kind === "income" ? "+" : "−"}
+                          {Math.round(it.amount).toLocaleString(lang === "he" ? "he-IL" : "en-GB")} {it.currency ?? "ILS"}
+                        </span>
+                      )}
+                      {it.invoiceNumber && (
+                        <span className="text-[10px] text-muted-foreground" dir="ltr">
+                          #{it.invoiceNumber}
+                        </span>
+                      )}
+                    </div>
                   )}
                   <div className="text-end text-sm">
                     <div>{formatDate(it.date, lang)}</div>

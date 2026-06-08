@@ -63,7 +63,13 @@
     "amount": "Amount",
     "status": "Status",
     "case": "Case / Counterparty",
-    "empty": "No payments. Press Sync to pull from the Sheet."
+    "empty": "No payments. Press Sync to pull from the Sheet.",
+    "searchPlaceholder": "Search invoice / client / amount…",
+    "rowsPerPage": "Rows per page",
+    "showingRange": "Showing {from}–{to} of {total}",
+    "pageOf": "Page {page} of {total}",
+    "prev": "Previous page",
+    "next": "Next page"
   },
   "nav": {
     "dashboard": "Dashboard",

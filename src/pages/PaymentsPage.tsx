@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Upload, ArrowDownCircle, ArrowUpCircle, Link2, X } from "lucide-react";
+import { Upload, ArrowDownCircle, ArrowUpCircle, ChevronLeft, ChevronRight, Link2, Search, X } from "lucide-react";
 import {
   importPaymentsFromCsv,
   listCases,
@@ -28,6 +28,9 @@ export function PaymentsPage() {
 
   const [dir, setDir] = useState<DirFilter>("all");
   const [status, setStatus] = useState<StatusFilter>("all");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   // Import modal state
   const [showImport, setShowImport] = useState(false);
@@ -78,12 +81,34 @@ export function PaymentsPage() {
   // Filters + totals
   const filtered = useMemo(() => {
     if (!rows) return [];
+    // Normalize search once: strip commas/currency for numeric match
+    const q = search.trim().toLowerCase();
+    const qNum = q.replace(/[₪$€,\s]/g, "");
     return rows.filter((r) => {
       if (dir !== "all" && r.direction !== dir) return false;
       if (status !== "all" && r.status !== status) return false;
+      if (q) {
+        const hay = [
+          r.invoice_number?.toLowerCase() ?? "",
+          r.client_raw?.toLowerCase() ?? "",
+          r.info?.toLowerCase() ?? "",
+        ].join("\n");
+        const amountStr = r.price_after_vat != null ? String(r.price_after_vat) : "";
+        if (!hay.includes(q) && !amountStr.includes(qNum)) return false;
+      }
       return true;
     });
-  }, [rows, dir, status]);
+  }, [rows, dir, status, search]);
+
+  // Reset to page 1 whenever the filter set or page size changes.
+  useEffect(() => { setPage(1); }, [dir, status, search, pageSize]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const pageClamped = Math.min(page, totalPages);
+  const paginated = useMemo(
+    () => filtered.slice((pageClamped - 1) * pageSize, pageClamped * pageSize),
+    [filtered, pageClamped, pageSize],
+  );
 
   const totals = useMemo(() => {
     const m = { income: 0, outcome: 0, openIncome: 0, openOutcome: 0 };
@@ -109,10 +134,22 @@ export function PaymentsPage() {
           <h1 className="text-2xl font-semibold">{t("payments.title")}</h1>
           <p className="text-sm text-muted-foreground">{t("payments.subtitle")}</p>
         </div>
-        <Button onClick={() => setShowImport(true)}>
-          <Upload className="size-4" />
-          {t("payments.importCsv")}
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search className="absolute start-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t("payments.searchPlaceholder")}
+              className="w-56 rounded-md border border-gray-200 bg-white py-1.5 pe-2.5 ps-7 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/40"
+            />
+          </div>
+          <Button onClick={() => setShowImport(true)}>
+            <Upload className="size-4" />
+            {t("payments.importCsv")}
+          </Button>
+        </div>
       </div>
 
       {/* Import modal */}
@@ -221,7 +258,7 @@ export function PaymentsPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((p) => (
+              {paginated.map((p) => (
                 <tr key={p.id} className="border-b last:border-b-0 hover:bg-gray-50/60">
                   <td className="px-3 py-2 text-muted-foreground" dir="ltr">
                     {p.due_date ? formatDate(p.due_date, lang) : "—"}
@@ -272,6 +309,55 @@ export function PaymentsPage() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Pagination — shown only when paginated rows exist */}
+      {filtered.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <span>{t("payments.rowsPerPage")}</span>
+            <select
+              value={pageSize}
+              onChange={(e) => setPageSize(Number(e.target.value))}
+              className="rounded-md border border-gray-200 bg-white px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/40"
+            >
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+            <span dir="ltr">
+              {t("payments.showingRange", {
+                from: (pageClamped - 1) * pageSize + 1,
+                to: Math.min(pageClamped * pageSize, filtered.length),
+                total: filtered.length,
+              })}
+            </span>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={pageClamped <= 1}
+              className="inline-flex size-8 items-center justify-center rounded-md border border-gray-200 bg-white text-muted-foreground hover:text-foreground hover:border-gray-300 disabled:opacity-40 disabled:hover:text-muted-foreground disabled:hover:border-gray-200"
+              title={t("payments.prev")}
+            >
+              <ChevronLeft className="size-4" />
+            </button>
+            <span className="px-2 text-muted-foreground" dir="ltr">
+              {t("payments.pageOf", { page: pageClamped, total: totalPages })}
+            </span>
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={pageClamped >= totalPages}
+              className="inline-flex size-8 items-center justify-center rounded-md border border-gray-200 bg-white text-muted-foreground hover:text-foreground hover:border-gray-300 disabled:opacity-40 disabled:hover:text-muted-foreground disabled:hover:border-gray-200"
+              title={t("payments.next")}
+            >
+              <ChevronRight className="size-4" />
+            </button>
+          </div>
         </div>
       )}
     </div>
