@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Files } from "lucide-react";
+import { Files, Link as LinkIcon } from "lucide-react";
 import {
   getAttachmentUrl,
   getDocumentUrl,
@@ -30,14 +30,14 @@ export function RecentFiles() {
         if (!alive) return;
         setFiles(rows);
 
-        // Pre-fetch signed URLs for image thumbnails only.
-        const imageRows = rows.filter((r) => r.mime_type?.startsWith("image/"));
+        // Pre-fetch signed URLs for image thumbnails only (file rows, not links).
+        const imageRows = rows.filter((r) => r.storage_path && r.mime_type?.startsWith("image/"));
         const urls = await Promise.all(
           imageRows.map(async (r) => {
             try {
               const url = r.source === "document"
-                ? await getDocumentUrl(r.storage_path, 1800)
-                : await getAttachmentUrl(r.storage_path, 1800);
+                ? await getDocumentUrl(r.storage_path!, 1800)
+                : await getAttachmentUrl(r.storage_path!, 1800);
               return [r.id, url] as const;
             } catch {
               return [r.id, ""] as const;
@@ -53,9 +53,14 @@ export function RecentFiles() {
 
   async function open(r: RecentFile) {
     try {
-      const url = r.source === "document"
-        ? await getDocumentUrl(r.storage_path)
-        : await getAttachmentUrl(r.storage_path);
+      // Link row: open the external URL directly. File row: fetch a signed URL.
+      const url = r.external_url
+        ?? (r.storage_path
+              ? (r.source === "document"
+                  ? await getDocumentUrl(r.storage_path)
+                  : await getAttachmentUrl(r.storage_path))
+              : null);
+      if (!url) throw new Error("Attachment has no target");
       window.open(url, "_blank", "noopener,noreferrer");
     } catch (e) {
       setError((e as Error).message);
@@ -92,7 +97,8 @@ export function RecentFiles() {
       </h2>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {files.map((r) => {
-          const isImage = !!r.mime_type?.startsWith("image/");
+          const isLink = !!r.external_url;
+          const isImage = !isLink && !!r.mime_type?.startsWith("image/");
           const thumb = thumbUrls[r.id];
           return (
             <button
@@ -104,6 +110,8 @@ export function RecentFiles() {
               <div className="flex aspect-[4/3] items-center justify-center overflow-hidden bg-gray-50">
                 {isImage && thumb ? (
                   <img src={thumb} alt={r.original_filename ?? ""} className="size-full object-cover" loading="lazy" />
+                ) : isLink ? (
+                  <LinkIcon className="size-10 text-blue-500" />
                 ) : (
                   <div className="scale-[2]">
                     <FileIcon mime={r.mime_type} filename={r.original_filename} />
@@ -111,8 +119,8 @@ export function RecentFiles() {
                 )}
               </div>
               <div className="px-2.5 pb-2 pt-0.5">
-                <div className="truncate text-xs font-medium text-foreground" title={r.original_filename ?? ""}>
-                  {r.original_filename ?? "—"}
+                <div className="truncate text-xs font-medium text-foreground" title={isLink ? (r.external_url ?? "") : (r.original_filename ?? "")}>
+                  {r.original_filename ?? (isLink ? hostOf(r.external_url!) : "—")}
                 </div>
                 <div className="mt-0.5 flex items-center justify-between text-[10px] text-muted-foreground">
                   <span className="truncate">
@@ -136,4 +144,9 @@ export function RecentFiles() {
       </div>
     </section>
   );
+}
+
+function hostOf(url: string): string {
+  try { return new URL(url).host.replace(/^www\./, ""); }
+  catch { return url; }
 }

@@ -226,7 +226,11 @@ export type Attachment = {
   id: string;
   entity_type: AttachmentEntityType;
   entity_id: string;
-  storage_path: string;
+  /** Set when the attachment is an uploaded file. Mutually exclusive with external_url (XOR enforced by DB). */
+  storage_path: string | null;
+  /** Set when the attachment is an external link (Google Drive, etc.). Mutually exclusive with storage_path. */
+  external_url: string | null;
+  /** For files: the original filename. For links: a human-friendly label (falls back to the URL). */
   original_filename: string | null;
   mime_type: string | null;
   size_bytes: number | null;

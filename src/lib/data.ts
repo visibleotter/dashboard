@@ -353,10 +353,53 @@ export async function getAttachmentUrl(storagePath: string, expiresInSec = 1800)
 }
 
 export async function deleteAttachment(att: Pick<Attachment, "id" | "storage_path">): Promise<void> {
-  const rm = await supabase.storage.from(DOCUMENTS_BUCKET).remove([att.storage_path]);
-  if (rm.error) throw new Error(rm.error.message);
+  // Links carry no storage object — skip the storage call.
+  if (att.storage_path) {
+    const rm = await supabase.storage.from(DOCUMENTS_BUCKET).remove([att.storage_path]);
+    if (rm.error) throw new Error(rm.error.message);
+  }
   const { error } = await supabase.from("attachments").delete().eq("id", att.id);
   if (error) throw new Error(error.message);
+}
+
+/**
+ * External-link attachment (Google Drive, OneDrive, generic URL). Stored as a
+ * row in the same `attachments` table with `external_url` set and
+ * `storage_path` null (DB enforces the XOR). The `label` becomes
+ * `original_filename` so the display column is uniform with files.
+ */
+export async function createAttachmentLink(
+  entityType: AttachmentEntityType,
+  entityId: string,
+  url: string,
+  label?: string | null,
+): Promise<Attachment> {
+  const trimmed = url.trim();
+  if (!trimmed) throw new Error("URL is required");
+  // Basic URL sanity — accept http/https only to avoid javascript: etc.
+  try {
+    const u = new URL(trimmed);
+    if (u.protocol !== "http:" && u.protocol !== "https:") {
+      throw new Error("Only http(s) links are allowed");
+    }
+  } catch {
+    throw new Error("Invalid URL");
+  }
+  const res = await supabase
+    .from("attachments")
+    .insert({
+      entity_type: entityType,
+      entity_id: entityId,
+      storage_path: null,
+      external_url: trimmed,
+      original_filename: (label?.trim() || null),
+      mime_type: null,
+      size_bytes: null,
+    })
+    .select("*")
+    .single();
+  if (res.error) throw new Error(res.error.message);
+  return res.data as Attachment;
 }
 
 // ---- recent files aggregator (dashboard widget) --------------------------
@@ -372,7 +415,10 @@ export interface RecentFile {
   source_title: string;        // task text / order title / case title
   case_id: string | null;
   case_title: string | null;
-  storage_path: string;
+  /** File rows: the storage key. Link rows: null. */
+  storage_path: string | null;
+  /** Link rows: the external URL. File rows: null. */
+  external_url: string | null;
   original_filename: string | null;
   mime_type: string | null;
   uploaded_at: string;
@@ -387,13 +433,13 @@ export async function listRecentFiles(limit = 12): Promise<RecentFile[]> {
       .limit(limit),
     supabase
       .from("attachments")
-      .select("id, entity_id, storage_path, original_filename, mime_type, uploaded_at")
+      .select("id, entity_id, storage_path, external_url, original_filename, mime_type, uploaded_at")
       .eq("entity_type", "task")
       .order("uploaded_at", { ascending: false })
       .limit(limit),
     supabase
       .from("attachments")
-      .select("id, entity_id, storage_path, original_filename, mime_type, uploaded_at")
+      .select("id, entity_id, storage_path, external_url, original_filename, mime_type, uploaded_at")
       .eq("entity_type", "order")
       .order("uploaded_at", { ascending: false })
       .limit(limit),
@@ -448,6 +494,7 @@ export async function listRecentFiles(limit = 12): Promise<RecentFile[]> {
       case_id: dd.case?.id ?? null,
       case_title: dd.case?.title ?? null,
       storage_path: dd.storage_path,
+      external_url: null,
       original_filename: dd.original_filename,
       mime_type: dd.mime_type,
       uploaded_at: dd.uploaded_at,
@@ -457,7 +504,8 @@ export async function listRecentFiles(limit = 12): Promise<RecentFile[]> {
     const aa = a as {
       id: string;
       entity_id: string;
-      storage_path: string;
+      storage_path: string | null;
+      external_url: string | null;
       original_filename: string | null;
       mime_type: string | null;
       uploaded_at: string;
@@ -471,6 +519,7 @@ export async function listRecentFiles(limit = 12): Promise<RecentFile[]> {
       case_id: t?.case?.id ?? null,
       case_title: t?.case?.title ?? null,
       storage_path: aa.storage_path,
+      external_url: aa.external_url,
       original_filename: aa.original_filename,
       mime_type: aa.mime_type,
       uploaded_at: aa.uploaded_at,
@@ -480,7 +529,8 @@ export async function listRecentFiles(limit = 12): Promise<RecentFile[]> {
     const aa = a as {
       id: string;
       entity_id: string;
-      storage_path: string;
+      storage_path: string | null;
+      external_url: string | null;
       original_filename: string | null;
       mime_type: string | null;
       uploaded_at: string;
@@ -494,6 +544,7 @@ export async function listRecentFiles(limit = 12): Promise<RecentFile[]> {
       case_id: o?.case?.id ?? null,
       case_title: o?.case?.title ?? null,
       storage_path: aa.storage_path,
+      external_url: aa.external_url,
       original_filename: aa.original_filename,
       mime_type: aa.mime_type,
       uploaded_at: aa.uploaded_at,

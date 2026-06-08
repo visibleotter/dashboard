@@ -20,6 +20,9 @@
   "attachments": {
     "title": "קבצים",
     "add": "+ צירוף",
+    "addLink": "+ קישור",
+    "linkUrlPlaceholder": "https://drive.google.com/…",
+    "linkLabelPlaceholder": "תווית (אופציונלי)",
     "empty": "אין קבצים.",
     "deleteConfirm": "למחוק את הקובץ?",
     "uploading": "מעלה…",

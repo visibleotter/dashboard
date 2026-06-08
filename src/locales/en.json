@@ -20,6 +20,9 @@
   "attachments": {
     "title": "Files",
     "add": "+ Attach",
+    "addLink": "+ Link",
+    "linkUrlPlaceholder": "https://drive.google.com/…",
+    "linkLabelPlaceholder": "Label (optional)",
     "empty": "No files.",
     "deleteConfirm": "Delete this file?",
     "uploading": "Uploading…",

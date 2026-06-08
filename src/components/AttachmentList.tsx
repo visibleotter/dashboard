@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { FileText, FileSpreadsheet, FileType, FileImage, Paperclip, Plus, Trash2, X } from "lucide-react";
+import { FileText, FileSpreadsheet, FileType, FileImage, Link as LinkIcon, Paperclip, Plus, Trash2, X } from "lucide-react";
 import {
+  createAttachmentLink,
   deleteAttachment,
   getAttachmentUrl,
   listAttachments,
@@ -33,6 +34,12 @@ export function AttachmentList({
   const [open, setOpen] = useState(!compact);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Inline "+ Link" form state
+  const [linkForm, setLinkForm] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("");
+  const [linkLabel, setLinkLabel] = useState("");
+  const [savingLink, setSavingLink] = useState(false);
 
   useEffect(() => {
     listAttachments(entityType, entityId).then(setItems).catch((e) => setError(e.message));
@@ -68,10 +75,28 @@ export function AttachmentList({
 
   async function handleOpen(a: Attachment) {
     try {
-      const url = await getAttachmentUrl(a.storage_path);
+      // Link row: open the external URL directly. File row: fetch a signed URL.
+      const url = a.external_url ?? (a.storage_path ? await getAttachmentUrl(a.storage_path) : null);
+      if (!url) throw new Error("Attachment has no target");
       window.open(url, "_blank", "noopener,noreferrer");
     } catch (e) {
       setError((e as Error).message);
+    }
+  }
+
+  async function handleAddLink(e: React.FormEvent) {
+    e.preventDefault();
+    if (!linkUrl.trim()) return;
+    setSavingLink(true);
+    setError(null);
+    try {
+      await createAttachmentLink(entityType, entityId, linkUrl.trim(), linkLabel.trim() || null);
+      setLinkUrl(""); setLinkLabel(""); setLinkForm(false);
+      setItems(await listAttachments(entityType, entityId));
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSavingLink(false);
     }
   }
 
@@ -108,6 +133,13 @@ export function AttachmentList({
           >
             <Plus className="size-3" /> {uploading ? t("attachments.uploading") : t("attachments.add")}
           </button>
+          <button
+            type="button"
+            onClick={() => setLinkForm((v) => !v)}
+            className="inline-flex items-center gap-1 rounded border border-gray-200 bg-white px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground"
+          >
+            <LinkIcon className="size-3" /> {t("attachments.addLink")}
+          </button>
           {compact && (
             <button
               type="button"
@@ -128,6 +160,39 @@ export function AttachmentList({
         </div>
       </div>
 
+      {/* Inline + Link form */}
+      {linkForm && (
+        <form onSubmit={handleAddLink} className="flex flex-wrap items-center gap-1.5 rounded border border-gray-200 bg-white px-2 py-1.5">
+          <input
+            autoFocus
+            type="url"
+            value={linkUrl}
+            onChange={(e) => setLinkUrl(e.target.value)}
+            placeholder={t("attachments.linkUrlPlaceholder")}
+            dir="ltr"
+            className="min-w-0 flex-1 rounded border border-gray-200 bg-white px-2 py-0.5 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/40"
+            required
+          />
+          <input
+            type="text"
+            value={linkLabel}
+            onChange={(e) => setLinkLabel(e.target.value)}
+            placeholder={t("attachments.linkLabelPlaceholder")}
+            className="w-32 rounded border border-gray-200 bg-white px-2 py-0.5 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/40"
+          />
+          <button
+            type="submit"
+            disabled={savingLink || !linkUrl.trim()}
+            className="rounded bg-primary px-2 py-0.5 text-xs text-white disabled:opacity-50"
+          >
+            {savingLink ? "…" : t("common.add")}
+          </button>
+          <button type="button" onClick={() => { setLinkForm(false); setLinkUrl(""); setLinkLabel(""); }} className="text-muted-foreground hover:text-foreground">
+            <X className="size-3.5" />
+          </button>
+        </form>
+      )}
+
       {error && <p className="text-xs text-destructive">{error}</p>}
 
       {items === null ? (
@@ -136,30 +201,39 @@ export function AttachmentList({
         <p className="text-xs text-muted-foreground">{t("attachments.empty")}</p>
       ) : (
         <ul className="space-y-0.5">
-          {items.map((a) => (
-            <li key={a.id} className="group flex items-center gap-2 text-xs">
-              <FileIcon mime={a.mime_type} filename={a.original_filename} />
-              <button
-                type="button"
-                onClick={() => handleOpen(a)}
-                className="min-w-0 flex-1 truncate text-start text-primary hover:underline"
-                title={a.original_filename ?? ""}
-              >
-                {a.original_filename ?? a.storage_path.split("/").pop()}
-              </button>
-              <span className="shrink-0 text-muted-foreground" dir="ltr">
-                {formatDate(a.uploaded_at, lang)}
-              </span>
-              <button
-                type="button"
-                onClick={() => handleDelete(a)}
-                className="hidden text-muted-foreground hover:text-red-500 group-hover:inline-flex"
-                title={t("attachments.deleteConfirm")}
-              >
-                <Trash2 className="size-3" />
-              </button>
-            </li>
-          ))}
+          {items.map((a) => {
+            const isLink = !!a.external_url;
+            const display = a.original_filename
+              ?? (isLink ? hostOf(a.external_url!) : a.storage_path?.split("/").pop() ?? "—");
+            return (
+              <li key={a.id} className="group flex items-center gap-2 text-xs">
+                {isLink ? (
+                  <LinkIcon className="size-3.5 shrink-0 text-blue-500" />
+                ) : (
+                  <FileIcon mime={a.mime_type} filename={a.original_filename} />
+                )}
+                <button
+                  type="button"
+                  onClick={() => handleOpen(a)}
+                  className="min-w-0 flex-1 truncate text-start text-primary hover:underline"
+                  title={isLink ? (a.external_url ?? "") : (a.original_filename ?? "")}
+                >
+                  {display}
+                </button>
+                <span className="shrink-0 text-muted-foreground" dir="ltr">
+                  {formatDate(a.uploaded_at, lang)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleDelete(a)}
+                  className="hidden text-muted-foreground hover:text-red-500 group-hover:inline-flex"
+                  title={t("attachments.deleteConfirm")}
+                >
+                  <Trash2 className="size-3" />
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
@@ -187,4 +261,10 @@ export function FileIcon({ mime, filename }: { mime: string | null; filename: st
     return <FileText className={`${cls} text-blue-500`} />;
   }
   return <FileType className={`${cls} text-muted-foreground`} />;
+}
+
+/** "drive.google.com/…" → "drive.google.com" — short display label for a URL. */
+function hostOf(url: string): string {
+  try { return new URL(url).host.replace(/^www\./, ""); }
+  catch { return url; }
 }
