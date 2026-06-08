@@ -15,6 +15,7 @@ import {
 } from "@/lib/data";
 import { useI18n } from "@/lib/i18n";
 import { formatDate } from "@/lib/dates";
+import { AttachmentList } from "@/components/AttachmentList";
 import type { Counterparty } from "@/types/db";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -293,6 +294,7 @@ export function OrdersPage() {
                           {money(Number(o.price))} {o.currency ?? "ILS"}
                         </span>
                       )}
+                      <AttachmentList entityType="order" entityId={o.id} compact />
                       <button
                         type="button"
                         onClick={() => openEdit(o)}

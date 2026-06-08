@@ -20,6 +20,7 @@ import {
 import { useI18n } from "@/lib/i18n";
 import { formatDate } from "@/lib/dates";
 import { Badge } from "@/components/ui/badge";
+import { AttachmentList } from "@/components/AttachmentList";
 import type { Counterparty, TaskRow } from "@/types/db";
 
 // ─── Shared input style ────────────────────────────────────────────────────
@@ -332,8 +333,12 @@ export function CaseWorkPreview({ caseId }: { caseId: string }) {
           {o.supplier?.name ? ` · ${o.supplier.name}` : ""}
           {o.order_date ? ` · ${formatDate(o.order_date, lang)}` : ""}
         </span>
-        <div className="flex shrink-0 items-center gap-2">
+        <div
+          className="flex shrink-0 items-center gap-2"
+          onClick={(e) => e.stopPropagation()}
+        >
           <span dir="ltr">{o.price != null ? `${money(Number(o.price))} ${o.currency ?? ""}` : "—"}</span>
+          <AttachmentList entityType="order" entityId={o.id} compact />
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); handleDeleteOrder(o.id); }}
@@ -544,6 +549,7 @@ export function CaseWorkPreview({ caseId }: { caseId: string }) {
             {tk.due_date && (
               <span className="text-muted-foreground" dir="ltr">{formatDate(tk.due_date, lang)}</span>
             )}
+            <AttachmentList entityType="task" entityId={tk.id} compact />
             <button
               type="button"
               onClick={() => handleDeleteTask(tk.id)}

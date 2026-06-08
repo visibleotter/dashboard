@@ -1,5 +1,7 @@
 import { supabase } from "@/lib/supabaseClient";
 import type {
+  Attachment,
+  AttachmentEntityType,
   Case,
   CaseStatus,
   CaseType,
@@ -286,6 +288,220 @@ export async function deleteDocument(doc: Pick<DocumentRow, "id" | "storage_path
   if (rm.error) throw new Error(rm.error.message);
   const { error } = await supabase.from("documents").delete().eq("id", doc.id);
   if (error) throw new Error(error.message);
+}
+
+// ---- attachments (0011): polymorphic files for tasks + orders ------------
+// Same private bucket as documents; just nested under `attachments/<type>/<id>/...`.
+// Mirrors uploadDocument / getDocumentUrl / deleteDocument shape.
+
+export async function uploadAttachment(
+  entityType: AttachmentEntityType,
+  entityId: string,
+  file: File,
+): Promise<Attachment> {
+  const path = `attachments/${entityType}/${entityId}/${safeFileName(file.name)}`;
+  const up = await supabase.storage
+    .from(DOCUMENTS_BUCKET)
+    .upload(path, file, { contentType: file.type || undefined, upsert: false });
+  if (up.error) throw new Error(up.error.message);
+
+  const res = await supabase
+    .from("attachments")
+    .insert({
+      entity_type: entityType,
+      entity_id: entityId,
+      storage_path: path,
+      original_filename: file.name,
+      mime_type: file.type || null,
+      size_bytes: file.size ?? null,
+    })
+    .select("*")
+    .single();
+  if (res.error) {
+    await supabase.storage.from(DOCUMENTS_BUCKET).remove([path]);
+    throw new Error(res.error.message);
+  }
+  return res.data as Attachment;
+}
+
+export async function listAttachments(
+  entityType: AttachmentEntityType,
+  entityId: string,
+): Promise<Attachment[]> {
+  return unwrap(
+    await supabase
+      .from("attachments")
+      .select("*")
+      .eq("entity_type", entityType)
+      .eq("entity_id", entityId)
+      .order("uploaded_at", { ascending: false }),
+  );
+}
+
+/**
+ * Signed URL — longer TTL (30 min) than getDocumentUrl, since the dashboard
+ * "Recent files" widget loads many thumbnails at once and a 2-min TTL would
+ * expire during a normal viewing session. Still bucket-private; still scoped
+ * to the user's auth.
+ */
+export async function getAttachmentUrl(storagePath: string, expiresInSec = 1800): Promise<string> {
+  const { data, error } = await supabase.storage
+    .from(DOCUMENTS_BUCKET)
+    .createSignedUrl(storagePath, expiresInSec);
+  if (error) throw new Error(error.message);
+  return data.signedUrl;
+}
+
+export async function deleteAttachment(att: Pick<Attachment, "id" | "storage_path">): Promise<void> {
+  const rm = await supabase.storage.from(DOCUMENTS_BUCKET).remove([att.storage_path]);
+  if (rm.error) throw new Error(rm.error.message);
+  const { error } = await supabase.from("attachments").delete().eq("id", att.id);
+  if (error) throw new Error(error.message);
+}
+
+// ---- recent files aggregator (dashboard widget) --------------------------
+// Unions documents + attachments(task) + attachments(order). The dataset is
+// small, so we fetch in parallel and merge in JS rather than building a view.
+
+export type RecentFileSource = "document" | "task" | "order";
+
+export interface RecentFile {
+  id: string;                  // synthetic: "{source}:{row_id}"
+  source: RecentFileSource;
+  source_id: string;
+  source_title: string;        // task text / order title / case title
+  case_id: string | null;
+  case_title: string | null;
+  storage_path: string;
+  original_filename: string | null;
+  mime_type: string | null;
+  uploaded_at: string;
+}
+
+export async function listRecentFiles(limit = 12): Promise<RecentFile[]> {
+  const [docsRes, taskAttRes, orderAttRes] = await Promise.all([
+    supabase
+      .from("documents")
+      .select("id, storage_path, original_filename, mime_type, uploaded_at, case:cases(id, title)")
+      .order("uploaded_at", { ascending: false })
+      .limit(limit),
+    supabase
+      .from("attachments")
+      .select("id, entity_id, storage_path, original_filename, mime_type, uploaded_at")
+      .eq("entity_type", "task")
+      .order("uploaded_at", { ascending: false })
+      .limit(limit),
+    supabase
+      .from("attachments")
+      .select("id, entity_id, storage_path, original_filename, mime_type, uploaded_at")
+      .eq("entity_type", "order")
+      .order("uploaded_at", { ascending: false })
+      .limit(limit),
+  ]);
+  if (docsRes.error) throw new Error(docsRes.error.message);
+  if (taskAttRes.error) throw new Error(taskAttRes.error.message);
+  if (orderAttRes.error) throw new Error(orderAttRes.error.message);
+
+  // Denormalise titles for tasks/orders. Single batched fetch each.
+  const taskIds = Array.from(new Set((taskAttRes.data ?? []).map((a) => a.entity_id as string)));
+  const orderIds = Array.from(new Set((orderAttRes.data ?? []).map((a) => a.entity_id as string)));
+  const [tasksData, ordersData] = await Promise.all([
+    taskIds.length === 0
+      ? Promise.resolve({ data: [], error: null })
+      : supabase
+          .from("tasks")
+          .select("id, text, case:cases(id, title)")
+          .in("id", taskIds),
+    orderIds.length === 0
+      ? Promise.resolve({ data: [], error: null })
+      : supabase
+          .from("orders")
+          .select("id, title, case:cases(id, title)")
+          .in("id", orderIds),
+  ]);
+  if (tasksData.error) throw new Error(tasksData.error.message);
+  if (ordersData.error) throw new Error(ordersData.error.message);
+
+  const taskById = new Map(
+    ((tasksData.data ?? []) as { id: string; text: string; case: { id: string; title: string } | null }[]).map((t) => [t.id, t]),
+  );
+  const orderById = new Map(
+    ((ordersData.data ?? []) as { id: string; title: string; case: { id: string; title: string } | null }[]).map((o) => [o.id, o]),
+  );
+
+  const items: RecentFile[] = [];
+
+  for (const d of (docsRes.data ?? []) as never[]) {
+    const dd = d as {
+      id: string;
+      storage_path: string;
+      original_filename: string | null;
+      mime_type: string | null;
+      uploaded_at: string;
+      case: { id: string; title: string } | null;
+    };
+    items.push({
+      id: `document:${dd.id}`,
+      source: "document",
+      source_id: dd.id,
+      source_title: dd.case?.title ?? "—",
+      case_id: dd.case?.id ?? null,
+      case_title: dd.case?.title ?? null,
+      storage_path: dd.storage_path,
+      original_filename: dd.original_filename,
+      mime_type: dd.mime_type,
+      uploaded_at: dd.uploaded_at,
+    });
+  }
+  for (const a of (taskAttRes.data ?? []) as never[]) {
+    const aa = a as {
+      id: string;
+      entity_id: string;
+      storage_path: string;
+      original_filename: string | null;
+      mime_type: string | null;
+      uploaded_at: string;
+    };
+    const t = taskById.get(aa.entity_id);
+    items.push({
+      id: `task:${aa.id}`,
+      source: "task",
+      source_id: aa.entity_id,
+      source_title: t?.text ?? "—",
+      case_id: t?.case?.id ?? null,
+      case_title: t?.case?.title ?? null,
+      storage_path: aa.storage_path,
+      original_filename: aa.original_filename,
+      mime_type: aa.mime_type,
+      uploaded_at: aa.uploaded_at,
+    });
+  }
+  for (const a of (orderAttRes.data ?? []) as never[]) {
+    const aa = a as {
+      id: string;
+      entity_id: string;
+      storage_path: string;
+      original_filename: string | null;
+      mime_type: string | null;
+      uploaded_at: string;
+    };
+    const o = orderById.get(aa.entity_id);
+    items.push({
+      id: `order:${aa.id}`,
+      source: "order",
+      source_id: aa.entity_id,
+      source_title: o?.title ?? "—",
+      case_id: o?.case?.id ?? null,
+      case_title: o?.case?.title ?? null,
+      storage_path: aa.storage_path,
+      original_filename: aa.original_filename,
+      mime_type: aa.mime_type,
+      uploaded_at: aa.uploaded_at,
+    });
+  }
+
+  items.sort((a, b) => b.uploaded_at.localeCompare(a.uploaded_at));
+  return items.slice(0, limit);
 }
 
 // ---- payment milestones (Phase 7) ----

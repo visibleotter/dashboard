@@ -17,6 +17,21 @@
     "all": "All",
     "edit": "Edit"
   },
+  "attachments": {
+    "title": "Files",
+    "add": "+ Attach",
+    "empty": "No files.",
+    "deleteConfirm": "Delete this file?",
+    "uploading": "Uploading…",
+    "count": "{n} files"
+  },
+  "recentFiles": {
+    "title": "Recent files",
+    "empty": "No files uploaded yet.",
+    "sourceDocument": "Case",
+    "sourceTask": "Task",
+    "sourceOrder": "Order"
+  },
   "ordersPage": {
     "subtitle": "Every order across all cases, grouped by project.",
     "caseRequired": "Case"

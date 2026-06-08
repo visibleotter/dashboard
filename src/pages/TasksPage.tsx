@@ -16,6 +16,7 @@ import {
 } from "@/lib/data";
 import { useI18n } from "@/lib/i18n";
 import { ALL_TASK_PRIORITIES, taskPriorityLabel } from "@/lib/labels";
+import { AttachmentList } from "@/components/AttachmentList";
 import { URGENCY_ORDER, formatDate, relativeDays, urgencyMeta, urgencyOf } from "@/lib/dates";
 import type { Counterparty, TaskPriority } from "@/types/db";
 import { Button } from "@/components/ui/button";
@@ -156,6 +157,7 @@ export function TasksPage() {
             </div>
           </div>
           <Badge className={taskPriorityLabel[task.priority].cls}>{tl(taskPriorityLabel[task.priority])}</Badge>
+          <AttachmentList entityType="task" entityId={task.id} compact />
           <Button type="button" variant="ghost" size="sm" onClick={() => remove(task)}>
             {t("common.delete")}
           </Button>

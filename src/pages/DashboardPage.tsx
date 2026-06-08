@@ -14,6 +14,7 @@ import { formatDate, relativeDays, urgencyMeta, urgencyOf } from "@/lib/dates";
 import { buildCaseViews, type CaseView } from "@/lib/completeness";
 import { useI18n } from "@/lib/i18n";
 import { CaseWorkPreview } from "@/components/CaseWorkPreview";
+import { RecentFiles } from "@/components/RecentFiles";
 import {
   ALL_WORK_STATUSES,
   GROUP_ORDER,
@@ -344,6 +345,9 @@ export function DashboardPage() {
               </div>
             </section>
           )}
+
+          {/* Recent files across documents + task/order attachments */}
+          <RecentFiles />
         </>
       )}
     </div>

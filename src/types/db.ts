@@ -218,6 +218,22 @@ export type OpCostCategory = {
   created_at: string;
 };
 
+// ---- Attachments (0011): polymorphic file storage for tasks and orders ----
+
+export type AttachmentEntityType = "task" | "order";
+
+export type Attachment = {
+  id: string;
+  entity_type: AttachmentEntityType;
+  entity_id: string;
+  storage_path: string;
+  original_filename: string | null;
+  mime_type: string | null;
+  size_bytes: number | null;
+  uploaded_at: string;
+  uploaded_by: string | null;
+};
+
 // ---- Payments (0010): cash-flow mirror from owner's Google Sheet ----
 
 export type PaymentDirection = "income" | "outcome";
@@ -396,6 +412,12 @@ export interface Database {
         Row: Payment;
         Insert: Insertable<Payment, DefaultCols | "synced_at" | "currency">;
         Update: Partial<Payment>;
+        Relationships: [];
+      };
+      attachments: {
+        Row: Attachment;
+        Insert: Insertable<Attachment, "id" | "uploaded_at" | "uploaded_by">;
+        Update: Partial<Attachment>;
         Relationships: [];
       };
     };
