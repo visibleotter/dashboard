@@ -133,6 +133,10 @@ export type PaymentMilestone = {
   paid_at: string | null;
 }
 
+export type KanbanStatus = "todo" | "doing" | "blocked" | "done";
+
+export const ALL_KANBAN_STATUSES: KanbanStatus[] = ["todo", "doing", "blocked", "done"];
+
 export type TaskRow = {
   id: string;
   case_id: string | null;
@@ -142,6 +146,8 @@ export type TaskRow = {
   done: boolean;
   category: string | null;
   notes: string | null;
+  kanban_status: KanbanStatus;
+  kanban_order: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -360,7 +366,7 @@ export interface Database {
       };
       tasks: {
         Row: TaskRow;
-        Insert: Insertable<TaskRow, DefaultCols | "priority" | "done">;
+        Insert: Insertable<TaskRow, DefaultCols | "priority" | "done" | "kanban_status">;
         Update: Partial<TaskRow>;
         Relationships: [];
       };

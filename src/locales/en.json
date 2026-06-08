@@ -71,6 +71,16 @@
     "prev": "Previous page",
     "next": "Next page"
   },
+  "kanban": {
+    "title": "Task board",
+    "add": "Add task",
+    "taskPlaceholder": "What needs doing…",
+    "emptyColumn": "Drop tasks here",
+    "todo": "Todo",
+    "doing": "Doing",
+    "blocked": "Blocked",
+    "done": "Done"
+  },
   "analytics": {
     "title": "Cash flow analytics",
     "year": "Year",

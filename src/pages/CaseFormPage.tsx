@@ -31,6 +31,7 @@ import { MilestonesSection } from "@/components/MilestonesSection";
 import { CaseTimeline } from "@/components/CaseTimeline";
 import { SpendSummary } from "@/components/SpendSummary";
 import { WorkItemsSection } from "@/components/WorkItemsSection";
+import { TaskBoard } from "@/components/TaskBoard";
 
 const CURRENCIES = ["ILS", "USD", "CNY", "EUR"];
 
@@ -330,6 +331,8 @@ export function CaseFormPage({ mode }: { mode: "create" | "edit" }) {
       )}
 
       {mode === "edit" && id && <WorkItemsSection caseId={id} onSpentChange={setSpent} />}
+
+      {mode === "edit" && id && <TaskBoard caseId={id} />}
 
       {mode === "edit" && id && <MilestonesSection caseId={id} />}
 

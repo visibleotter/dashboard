@@ -652,6 +652,36 @@ export async function listTasksForCase(caseId: string): Promise<TaskRow[]> {
   );
 }
 
+/** Tasks for the case Kanban — sorted by column, then by kanban_order. */
+export async function listTasksForBoard(caseId: string): Promise<TaskRow[]> {
+  return unwrap(
+    await supabase
+      .from("tasks")
+      .select("*")
+      .eq("case_id", caseId)
+      .order("kanban_status", { ascending: true })
+      .order("kanban_order", { ascending: true, nullsFirst: false })
+      .order("created_at", { ascending: false }),
+  );
+}
+
+import type { KanbanStatus } from "@/types/db";
+
+/**
+ * Mutate the kanban column / order of a single task. `done` is kept in sync
+ * with kanban_status so the legacy /tasks list reflects board moves.
+ */
+export async function updateTaskKanban(
+  id: string,
+  patch: { kanban_status?: KanbanStatus; kanban_order?: number | null },
+) {
+  const payload: Partial<TaskRow> = { ...patch };
+  if (patch.kanban_status !== undefined) {
+    payload.done = patch.kanban_status === "done";
+  }
+  return unwrap(await supabase.from("tasks").update(payload).eq("id", id).select("*").single());
+}
+
 // ---- payments (0010): mirrored from owner's Google Sheet CashFlow_9 ----
 
 export interface PaymentWithRefs extends Payment {
