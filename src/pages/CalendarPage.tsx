@@ -4,6 +4,7 @@ import { listCalendarItems, type CalendarItem, type CalendarKind } from "@/lib/d
 import { useI18n } from "@/lib/i18n";
 import { URGENCY_ORDER, formatDate, relativeDays, urgencyMeta, urgencyOf } from "@/lib/dates";
 import { Badge } from "@/components/ui/badge";
+import { Chip } from "@/components/ui/chip";
 
 const kindCls: Record<CalendarKind, string> = {
   case: "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200",
@@ -57,16 +58,14 @@ export function CalendarPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {FILTERS.map((fl) => (
-            <button
+            <Chip
               key={fl.key}
-              type="button"
+              active={filter === fl.key}
               onClick={() => setFilter(fl.key)}
-              className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
-                filter === fl.key ? "bg-primary text-primary-foreground" : "border hover:bg-accent"
-              }`}
+              small
             >
               {t(fl.labelKey)}
-            </button>
+            </Chip>
           ))}
           <label className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <input

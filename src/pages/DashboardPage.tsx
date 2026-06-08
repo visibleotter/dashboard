@@ -27,6 +27,7 @@ import {
 import type { CaseGroup, WorkStatus } from "@/types/db";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Chip, ChipCount } from "@/components/ui/chip";
 import { cn } from "@/lib/utils";
 
 // ── WorkStatus inline picker ───────────────────────────────────────────────
@@ -239,29 +240,34 @@ export function DashboardPage() {
 
           {/* Status filter bar */}
           <div className="flex flex-wrap gap-1.5">
-            <FilterPill active={statusFilter === "all"} onClick={() => setStatusFilter("all")}>
-              {t("common.all")} <CountBubble n={views.length} />
-            </FilterPill>
+            <Chip active={statusFilter === "all"} onClick={() => setStatusFilter("all")}>
+              {t("common.all")} <ChipCount n={views.length} />
+            </Chip>
             {ALL_WORK_STATUSES.map((ws) => (
-              <FilterPill key={ws} active={statusFilter === ws} onClick={() => setStatusFilter(ws)} status={ws}>
-                {tl(workStatusLabel[ws])} <CountBubble n={countByStatus[ws]} />
-              </FilterPill>
+              <Chip
+                key={ws}
+                active={statusFilter === ws}
+                onClick={() => setStatusFilter(ws)}
+                dotClass={WORK_STATUS_DOTS[ws]}
+              >
+                {tl(workStatusLabel[ws])} <ChipCount n={countByStatus[ws]} />
+              </Chip>
             ))}
           </div>
 
           {/* Group sub-filter */}
           {statusFilter === "all" && (
             <div className="flex flex-wrap gap-1.5">
-              <FilterPill small active={groupFilter === "all"} onClick={() => setGroupFilter("all")}>
+              <Chip small active={groupFilter === "all"} onClick={() => setGroupFilter("all")}>
                 {t("common.all")}
-              </FilterPill>
+              </Chip>
               {GROUP_ORDER.map((g) => {
                 const n = views.filter((v) => v.case.case_type?.group === g).length;
                 if (!n) return null;
                 return (
-                  <FilterPill key={g} small active={groupFilter === g} onClick={() => setGroupFilter(g)}>
+                  <Chip key={g} small active={groupFilter === g} onClick={() => setGroupFilter(g)}>
                     {tl(groupLabel[g])}
-                  </FilterPill>
+                  </Chip>
                 );
               })}
             </div>
@@ -356,55 +362,14 @@ export function DashboardPage() {
 
 // ── Filter pill ────────────────────────────────────────────────────────────
 
-function FilterPill({
-  active,
-  onClick,
-  children,
-  small,
-  status,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-  small?: boolean;
-  status?: WorkStatus;
-}) {
-  const statusDot = status ? {
-    planned: "bg-blue-500",
-    in_progress: "bg-green-500",
-    on_hold: "bg-red-400",
-    robot_on_way: "bg-amber-400",
-    done: "bg-purple-500",
-  }[status] : null;
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border transition-all",
-        small ? "px-2.5 py-0.5 text-xs" : "px-3 py-1 text-sm",
-        active
-          ? "border-primary/30 bg-primary/10 font-semibold text-primary"
-          : "border-gray-200 bg-white text-muted-foreground hover:border-gray-300 hover:text-foreground",
-      )}
-    >
-      {statusDot && (
-        <span className={cn("size-2 rounded-full", statusDot)} />
-      )}
-      {children}
-    </button>
-  );
-}
-
-function CountBubble({ n }: { n: number }) {
-  if (n === 0) return null;
-  return (
-    <span className="ms-0.5 rounded-full bg-gray-100 px-1.5 py-0 text-xs font-normal text-muted-foreground">
-      {n}
-    </span>
-  );
-}
+/** Color dots for the status-filter chips. */
+const WORK_STATUS_DOTS: Record<WorkStatus, string> = {
+  planned: "bg-blue-500",
+  in_progress: "bg-green-500",
+  on_hold: "bg-red-400",
+  robot_on_way: "bg-amber-400",
+  done: "bg-purple-500",
+};
 
 // ── Group section ──────────────────────────────────────────────────────────
 

@@ -22,6 +22,8 @@ import {
 import type { CaseGroup, CaseType, Counterparty, WorkStatus } from "@/types/db";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { IconButton } from "@/components/ui/icon-button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 const CURRENCIES = ["ILS", "USD", "CNY", "EUR"];
 
@@ -265,14 +267,25 @@ export function CasesListPage() {
       .catch((e) => setError(e.message));
   }, []);
 
-  async function handleDelete(v: CaseView, e: React.MouseEvent) {
+  const [pendingDelete, setPendingDelete] = useState<CaseView | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  function handleDelete(v: CaseView, e: React.MouseEvent) {
     e.preventDefault();
-    const msg = v.children.length > 0
-      ? t("caseForm.deleteConfirmChildren", { n: v.children.length })
-      : t("caseForm.deleteConfirm");
-    if (!confirm(msg)) return;
-    await deleteCase(v.case.id);
-    setCases((prev) => prev?.filter((c) => c.id !== v.case.id) ?? null);
+    setPendingDelete(v);
+  }
+  async function confirmDelete() {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    try {
+      await deleteCase(pendingDelete.case.id);
+      setCases((prev) => prev?.filter((c) => c.id !== pendingDelete.case.id) ?? null);
+      setPendingDelete(null);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setDeleting(false);
+    }
   }
 
   async function handleStatusChange(id: string, ws: WorkStatus) {
@@ -349,6 +362,20 @@ export function CasesListPage() {
             />
           );
         })}
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title={
+          pendingDelete && pendingDelete.children.length > 0
+            ? t("caseForm.deleteConfirmChildren", { n: pendingDelete.children.length })
+            : t("caseForm.deleteConfirm")
+        }
+        confirmLabel={t("common.delete")}
+        cancelLabel={t("common.cancel")}
+        busy={deleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 }
@@ -461,30 +488,34 @@ function GroupSection({
 
                 {/* Actions */}
                 <div className="flex w-16 shrink-0 items-center justify-end gap-1">
-                  <button
-                    type="button"
+                  <IconButton
+                    variant="primary"
                     onClick={() => onEdit(isEditing ? "" : v.case.id)}
-                    className={`rounded p-1 text-muted-foreground hover:text-primary hover:bg-primary/10 ${isEditing ? "text-primary bg-primary/10" : "hidden group-hover:inline-flex"}`}
                     title={t("cases.editCase")}
+                    aria-label={t("cases.editCase")}
+                    size="sm"
+                    className={isEditing ? "bg-primary/10" : "hidden group-hover:inline-flex"}
                   >
-                    {isEditing ? <X className="size-3.5" /> : <Pencil className="size-3.5" />}
-                  </button>
+                    {isEditing ? <X /> : <Pencil />}
+                  </IconButton>
                   <Link
                     to={`/cases/${v.case.id}`}
-                    className="hidden rounded p-1 text-muted-foreground hover:text-primary hover:bg-primary/10 group-hover:inline-flex"
+                    className="hidden rounded-md size-6 items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary group-hover:inline-flex [&_svg]:size-3.5"
                     title={t("common.open")}
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <ExternalLink className="size-3.5" />
+                    <ExternalLink />
                   </Link>
-                  <button
-                    type="button"
+                  <IconButton
+                    variant="destructive"
                     onClick={(e) => onDelete(v, e)}
-                    className="hidden rounded p-1 text-muted-foreground hover:text-red-500 hover:bg-red-50 group-hover:inline-flex"
                     title={t("caseForm.deleteConfirm")}
+                    aria-label={t("caseForm.deleteConfirm")}
+                    size="sm"
+                    className="hidden group-hover:inline-flex"
                   >
-                    <Trash2 className="size-3.5" />
-                  </button>
+                    <Trash2 />
+                  </IconButton>
                 </div>
               </div>
 

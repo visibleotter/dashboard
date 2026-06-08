@@ -17,6 +17,7 @@ import {
 import { useI18n } from "@/lib/i18n";
 import { ALL_TASK_PRIORITIES, taskPriorityLabel } from "@/lib/labels";
 import { AttachmentList } from "@/components/AttachmentList";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { URGENCY_ORDER, formatDate, relativeDays, urgencyMeta, urgencyOf } from "@/lib/dates";
 import type { Counterparty, TaskPriority } from "@/types/db";
 import { Button } from "@/components/ui/button";
@@ -119,13 +120,21 @@ export function TasksPage() {
     }
   }
 
-  async function remove(task: TaskWithCase) {
-    if (!window.confirm(t("tasks.deleteConfirm"))) return;
+  const [pendingDelete, setPendingDelete] = useState<TaskWithCase | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  function remove(task: TaskWithCase) { setPendingDelete(task); }
+  async function confirmDelete() {
+    if (!pendingDelete) return;
+    setDeleting(true);
     try {
-      await deleteTask(task.id);
-      setTasks((prev) => prev?.filter((x) => x.id !== task.id) ?? null);
+      await deleteTask(pendingDelete.id);
+      setTasks((prev) => prev?.filter((x) => x.id !== pendingDelete.id) ?? null);
+      setPendingDelete(null);
     } catch (e) {
       setError((e as Error).message);
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -331,6 +340,16 @@ export function TasksPage() {
           {list(done)}
         </section>
       )}
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title={t("tasks.deleteConfirm")}
+        confirmLabel={t("common.delete")}
+        cancelLabel={t("common.cancel")}
+        busy={deleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 }

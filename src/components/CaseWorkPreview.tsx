@@ -20,6 +20,9 @@ import {
 import { useI18n } from "@/lib/i18n";
 import { formatDate } from "@/lib/dates";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { AttachmentList } from "@/components/AttachmentList";
 import type { Counterparty, TaskRow } from "@/types/db";
 
@@ -125,17 +128,37 @@ export function CaseWorkPreview({ caseId }: { caseId: string }) {
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
-  async function handleDeleteWI(id: string) {
-    if (!confirm(t("workItems.deleteConfirm"))) return;
-    await deleteWorkItem(id);
-    await load();
+  // Polymorphic delete confirmation: one dialog handles workItems / orders / tasks
+  const [pendingDelete, setPendingDelete] = useState<
+    | { kind: "wi"; id: string }
+    | { kind: "order"; id: string }
+    | { kind: "task"; id: string }
+    | null
+  >(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const deleteLabels: Record<"wi" | "order" | "task", string> = {
+    wi: t("workItems.deleteConfirm"),
+    order: t("orders.deleteConfirm"),
+    task: t("inlineTasks.deleteConfirm"),
+  };
+
+  async function confirmDelete() {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    try {
+      if (pendingDelete.kind === "wi") await deleteWorkItem(pendingDelete.id);
+      else if (pendingDelete.kind === "order") await deleteOrder(pendingDelete.id);
+      else if (pendingDelete.kind === "task") await deleteTask(pendingDelete.id);
+      setPendingDelete(null);
+      await load();
+    } finally {
+      setDeleting(false);
+    }
   }
 
-  async function handleDeleteOrder(id: string) {
-    if (!confirm(t("orders.deleteConfirm"))) return;
-    await deleteOrder(id);
-    await load();
-  }
+  function handleDeleteWI(id: string) { setPendingDelete({ kind: "wi", id }); }
+  function handleDeleteOrder(id: string) { setPendingDelete({ kind: "order", id }); }
 
   function resetWIForm() {
     setWiName(""); setWiCost("");
@@ -257,11 +280,7 @@ export function CaseWorkPreview({ caseId }: { caseId: string }) {
     await updateTask(task.id, { done: !task.done });
   }
 
-  async function handleDeleteTask(id: string) {
-    if (!confirm(t("inlineTasks.deleteConfirm"))) return;
-    await deleteTask(id);
-    await load();
-  }
+  function handleDeleteTask(id: string) { setPendingDelete({ kind: "task", id }); }
 
   if (error) return <p className="px-4 pb-3 text-xs text-destructive">{error}</p>;
   if (items === null) return <p className="px-4 pb-3 text-xs text-muted-foreground">{t("common.loading")}</p>;
@@ -283,12 +302,12 @@ export function CaseWorkPreview({ caseId }: { caseId: string }) {
         {counterparties.map((cp) => <option key={cp.id} value={cp.id}>{cp.name}</option>)}
       </select>
       <input type="date" className={FIELD} value={orderDate} onChange={(e) => setOrderDate(e.target.value)} />
-      <button type="submit" disabled={savingOrder || !orderTitle.trim()} className="rounded bg-primary px-2 py-1 text-xs text-white disabled:opacity-50">
+      <Button type="submit" size="sm" disabled={savingOrder || !orderTitle.trim()}>
         {savingOrder ? "…" : t("common.add")}
-      </button>
-      <button type="button" onClick={() => setAddingOrderFor(null)} className="text-muted-foreground hover:text-foreground">
-        <X className="size-3.5" />
-      </button>
+      </Button>
+      <IconButton size="sm" onClick={() => setAddingOrderFor(null)} aria-label={t("common.cancel")}>
+        <X />
+      </IconButton>
     </form>
   );
 
@@ -310,12 +329,12 @@ export function CaseWorkPreview({ caseId }: { caseId: string }) {
         {counterparties.map((cp) => <option key={cp.id} value={cp.id}>{cp.name}</option>)}
       </select>
       <input type="date" className={FIELD} value={editOrderDate} onChange={(e) => setEditOrderDate(e.target.value)} />
-      <button type="submit" disabled={savingOrderEdit || !editOrderTitle.trim()} className="rounded bg-primary px-2 py-1 text-xs text-white disabled:opacity-50">
+      <Button type="submit" size="sm" disabled={savingOrderEdit || !editOrderTitle.trim()}>
         {savingOrderEdit ? "…" : t("common.save")}
-      </button>
-      <button type="button" onClick={() => setEditingOrderId(null)} className="text-muted-foreground hover:text-foreground">
-        <X className="size-3.5" />
-      </button>
+      </Button>
+      <IconButton size="sm" onClick={() => setEditingOrderId(null)} aria-label={t("common.cancel")}>
+        <X />
+      </IconButton>
     </form>
   );
 
@@ -339,14 +358,16 @@ export function CaseWorkPreview({ caseId }: { caseId: string }) {
         >
           <span dir="ltr">{o.price != null ? `${money(Number(o.price))} ${o.currency ?? ""}` : "—"}</span>
           <AttachmentList entityType="order" entityId={o.id} compact />
-          <button
-            type="button"
+          <IconButton
+            variant="destructive"
+            size="sm"
             onClick={(e) => { e.stopPropagation(); handleDeleteOrder(o.id); }}
-            className="hidden text-muted-foreground hover:text-red-500 group-hover:inline-flex"
             title={t("orders.deleteConfirm")}
+            aria-label={t("orders.deleteConfirm")}
+            className="hidden group-hover:inline-flex"
           >
-            <Trash2 className="size-3" />
-          </button>
+            <Trash2 />
+          </IconButton>
         </div>
       </div>
     );
@@ -380,13 +401,16 @@ export function CaseWorkPreview({ caseId }: { caseId: string }) {
               >
                 <Plus className="size-3" /> {t("orders.add")}
               </button>
-              <button
-                type="button"
+              <IconButton
+                variant="destructive"
+                size="sm"
                 onClick={() => handleDeleteWI(w.id)}
-                className="hidden text-muted-foreground hover:text-red-500 group-hover:inline-flex"
+                aria-label={t("workItems.deleteConfirm")}
+                title={t("workItems.deleteConfirm")}
+                className="hidden group-hover:inline-flex"
               >
-                <Trash2 className="size-3.5" />
-              </button>
+                <Trash2 />
+              </IconButton>
             </div>
           </div>
 
@@ -455,9 +479,9 @@ export function CaseWorkPreview({ caseId }: { caseId: string }) {
                     {t("orders.pickExisting")}
                   </button>
                 </div>
-                <button type="button" onClick={() => setWiAttachOrder(false)} className="text-muted-foreground hover:text-foreground">
-                  <X className="size-3.5" />
-                </button>
+                <IconButton size="sm" onClick={() => setWiAttachOrder(false)} aria-label={t("common.cancel")}>
+                  <X />
+                </IconButton>
               </div>
 
               {wiOrderMode === "new" ? (
@@ -492,16 +516,12 @@ export function CaseWorkPreview({ caseId }: { caseId: string }) {
           )}
 
           <div className="flex items-center gap-2 pt-0.5">
-            <button
-              type="submit"
-              disabled={savingWI || !wiName.trim()}
-              className="rounded bg-primary px-3 py-1 text-sm text-white disabled:opacity-50"
-            >
+            <Button type="submit" size="sm" disabled={savingWI || !wiName.trim()}>
               {savingWI ? "…" : t("common.add")}
-            </button>
-            <button type="button" onClick={resetWIForm} className="text-xs text-muted-foreground hover:text-foreground">
+            </Button>
+            <Button type="button" size="sm" variant="ghost" onClick={resetWIForm}>
               {t("common.cancel")}
-            </button>
+            </Button>
           </div>
         </form>
       ) : (
@@ -550,14 +570,16 @@ export function CaseWorkPreview({ caseId }: { caseId: string }) {
               <span className="text-muted-foreground" dir="ltr">{formatDate(tk.due_date, lang)}</span>
             )}
             <AttachmentList entityType="task" entityId={tk.id} compact />
-            <button
-              type="button"
+            <IconButton
+              variant="destructive"
+              size="sm"
               onClick={() => handleDeleteTask(tk.id)}
-              className="hidden text-muted-foreground hover:text-red-500 group-hover:inline-flex"
+              aria-label={t("inlineTasks.deleteConfirm")}
               title={t("inlineTasks.deleteConfirm")}
+              className="hidden group-hover:inline-flex"
             >
-              <Trash2 className="size-3" />
-            </button>
+              <Trash2 />
+            </IconButton>
           </div>
         ))}
         {addingTask ? (
@@ -570,12 +592,12 @@ export function CaseWorkPreview({ caseId }: { caseId: string }) {
               onChange={(e) => setTaskText(e.target.value)}
             />
             <input type="date" className={FIELD} value={taskDue} onChange={(e) => setTaskDue(e.target.value)} />
-            <button type="submit" disabled={savingTask || !taskText.trim()} className="rounded bg-primary px-2 py-1 text-xs text-white disabled:opacity-50">
+            <Button type="submit" size="sm" disabled={savingTask || !taskText.trim()}>
               {savingTask ? "…" : t("common.add")}
-            </button>
-            <button type="button" onClick={() => { setAddingTask(false); setTaskText(""); setTaskDue(""); }} className="text-muted-foreground hover:text-foreground">
-              <X className="size-3.5" />
-            </button>
+            </Button>
+            <IconButton size="sm" onClick={() => { setAddingTask(false); setTaskText(""); setTaskDue(""); }} aria-label={t("common.cancel")}>
+              <X />
+            </IconButton>
           </form>
         ) : (
           <button
@@ -587,6 +609,16 @@ export function CaseWorkPreview({ caseId }: { caseId: string }) {
           </button>
         )}
       </div>
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title={pendingDelete ? deleteLabels[pendingDelete.kind] : ""}
+        confirmLabel={t("common.delete")}
+        cancelLabel={t("common.cancel")}
+        busy={deleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 }

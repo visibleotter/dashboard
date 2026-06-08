@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Pencil, Trash2, X } from "lucide-react";
+import { IconButton } from "@/components/ui/icon-button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   createOrder,
   deleteOrder,
@@ -127,13 +129,21 @@ export function OrdersPage() {
     }
   }
 
-  async function handleDelete(o: OrderWithRefs) {
-    if (!confirm(t("orders.deleteConfirm"))) return;
+  // Confirm-delete state
+  const [pendingDelete, setPendingDelete] = useState<OrderWithRefs | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  async function confirmDelete() {
+    if (!pendingDelete) return;
+    setDeleting(true);
     try {
-      await deleteOrder(o.id);
-      setOrders((prev) => prev?.filter((x) => x.id !== o.id) ?? null);
+      await deleteOrder(pendingDelete.id);
+      setOrders((prev) => prev?.filter((x) => x.id !== pendingDelete.id) ?? null);
+      setPendingDelete(null);
     } catch (e) {
       setError((e as Error).message);
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -275,9 +285,9 @@ export function OrdersPage() {
                       <Button type="submit" size="sm" disabled={savingEdit || !eTitle.trim()}>
                         {savingEdit ? "…" : t("common.save")}
                       </Button>
-                      <Button type="button" size="sm" variant="ghost" onClick={cancelEdit}>
-                        <X className="size-4" />
-                      </Button>
+                      <IconButton onClick={cancelEdit} aria-label={t("common.cancel")}>
+                        <X />
+                      </IconButton>
                     </form>
                   ) : (
                     <div className="group flex flex-wrap items-center gap-3">
@@ -295,22 +305,22 @@ export function OrdersPage() {
                         </span>
                       )}
                       <AttachmentList entityType="order" entityId={o.id} compact />
-                      <button
-                        type="button"
+                      <IconButton
+                        variant="primary"
                         onClick={() => openEdit(o)}
-                        className="rounded p-1 text-muted-foreground hover:bg-primary/10 hover:text-primary"
                         title={t("common.edit") ?? "Edit"}
+                        aria-label={t("common.edit") ?? "Edit"}
                       >
-                        <Pencil className="size-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(o)}
-                        className="rounded p-1 text-muted-foreground hover:bg-red-50 hover:text-red-500"
+                        <Pencil />
+                      </IconButton>
+                      <IconButton
+                        variant="destructive"
+                        onClick={() => setPendingDelete(o)}
                         title={t("common.delete")}
+                        aria-label={t("common.delete")}
                       >
-                        <Trash2 className="size-4" />
-                      </button>
+                        <Trash2 />
+                      </IconButton>
                     </div>
                   )}
                 </li>
@@ -319,6 +329,16 @@ export function OrdersPage() {
           </section>
         );
       })}
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title={t("orders.deleteConfirm")}
+        confirmLabel={t("common.delete")}
+        cancelLabel={t("common.cancel")}
+        busy={deleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 }

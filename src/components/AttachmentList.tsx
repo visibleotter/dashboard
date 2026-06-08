@@ -9,6 +9,9 @@ import {
 } from "@/lib/data";
 import { useI18n } from "@/lib/i18n";
 import { formatDate } from "@/lib/dates";
+import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { Attachment, AttachmentEntityType } from "@/types/db";
 
 /**
@@ -41,6 +44,10 @@ export function AttachmentList({
   const [linkLabel, setLinkLabel] = useState("");
   const [savingLink, setSavingLink] = useState(false);
 
+  // Confirm-delete dialog state
+  const [pendingDelete, setPendingDelete] = useState<Attachment | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
   useEffect(() => {
     listAttachments(entityType, entityId).then(setItems).catch((e) => setError(e.message));
   }, [entityType, entityId]);
@@ -63,13 +70,17 @@ export function AttachmentList({
     }
   }
 
-  async function handleDelete(a: Attachment) {
-    if (!confirm(t("attachments.deleteConfirm"))) return;
+  async function confirmDelete() {
+    if (!pendingDelete) return;
+    setDeleting(true);
     try {
-      await deleteAttachment(a);
-      setItems((prev) => prev?.filter((x) => x.id !== a.id) ?? null);
+      await deleteAttachment(pendingDelete);
+      setItems((prev) => prev?.filter((x) => x.id !== pendingDelete.id) ?? null);
+      setPendingDelete(null);
     } catch (e) {
       setError((e as Error).message);
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -108,8 +119,8 @@ export function AttachmentList({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-muted-foreground hover:bg-gray-200 hover:text-foreground"
         title={t("attachments.title")}
+        className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-muted-foreground hover:bg-gray-200 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
       >
         <Paperclip className="size-3" />
         {count > 0 ? count : "+"}
@@ -125,30 +136,29 @@ export function AttachmentList({
           {t("attachments.title")} {count > 0 && `(${count})`}
         </span>
         <div className="flex items-center gap-1">
-          <button
-            type="button"
+          <Button
+            size="sm"
             onClick={() => fileRef.current?.click()}
             disabled={uploading}
-            className="inline-flex items-center gap-1 rounded bg-primary px-2 py-0.5 text-xs text-white hover:bg-primary/90 disabled:opacity-50"
           >
-            <Plus className="size-3" /> {uploading ? t("attachments.uploading") : t("attachments.add")}
-          </button>
-          <button
-            type="button"
+            <Plus /> {uploading ? t("attachments.uploading") : t("attachments.add")}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
             onClick={() => setLinkForm((v) => !v)}
-            className="inline-flex items-center gap-1 rounded border border-gray-200 bg-white px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground"
           >
-            <LinkIcon className="size-3" /> {t("attachments.addLink")}
-          </button>
+            <LinkIcon /> {t("attachments.addLink")}
+          </Button>
           {compact && (
-            <button
-              type="button"
+            <IconButton
               onClick={() => setOpen(false)}
-              className="rounded p-0.5 text-muted-foreground hover:text-foreground"
+              size="sm"
               title={t("common.cancel")}
+              aria-label={t("common.cancel")}
             >
-              <X className="size-3.5" />
-            </button>
+              <X />
+            </IconButton>
           )}
           <input
             ref={fileRef}
@@ -180,16 +190,16 @@ export function AttachmentList({
             placeholder={t("attachments.linkLabelPlaceholder")}
             className="w-32 rounded border border-gray-200 bg-white px-2 py-0.5 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/40"
           />
-          <button
-            type="submit"
-            disabled={savingLink || !linkUrl.trim()}
-            className="rounded bg-primary px-2 py-0.5 text-xs text-white disabled:opacity-50"
-          >
+          <Button type="submit" size="sm" disabled={savingLink || !linkUrl.trim()}>
             {savingLink ? "…" : t("common.add")}
-          </button>
-          <button type="button" onClick={() => { setLinkForm(false); setLinkUrl(""); setLinkLabel(""); }} className="text-muted-foreground hover:text-foreground">
-            <X className="size-3.5" />
-          </button>
+          </Button>
+          <IconButton
+            size="sm"
+            onClick={() => { setLinkForm(false); setLinkUrl(""); setLinkLabel(""); }}
+            aria-label={t("common.cancel")}
+          >
+            <X />
+          </IconButton>
         </form>
       )}
 
@@ -223,19 +233,31 @@ export function AttachmentList({
                 <span className="shrink-0 text-muted-foreground" dir="ltr">
                   {formatDate(a.uploaded_at, lang)}
                 </span>
-                <button
-                  type="button"
-                  onClick={() => handleDelete(a)}
-                  className="hidden text-muted-foreground hover:text-red-500 group-hover:inline-flex"
+                <IconButton
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setPendingDelete(a)}
                   title={t("attachments.deleteConfirm")}
+                  aria-label={t("attachments.deleteConfirm")}
+                  className="hidden group-hover:inline-flex"
                 >
-                  <Trash2 className="size-3" />
-                </button>
+                  <Trash2 />
+                </IconButton>
               </li>
             );
           })}
         </ul>
       )}
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title={t("attachments.deleteConfirm")}
+        confirmLabel={t("common.delete")}
+        cancelLabel={t("common.cancel")}
+        busy={deleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 }

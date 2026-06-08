@@ -15,6 +15,8 @@ import { formatDate } from "@/lib/dates";
 import type { Counterparty, PaymentDirection, PaymentStatus } from "@/types/db";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Chip } from "@/components/ui/chip";
+import { IconButton } from "@/components/ui/icon-button";
 
 type DirFilter = "all" | PaymentDirection;
 type StatusFilter = "all" | PaymentStatus;
@@ -225,17 +227,17 @@ export function PaymentsPage() {
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
-        <FilterPill active={dir === "all"} onClick={() => setDir("all")}>{t("common.all")}</FilterPill>
-        <FilterPill active={dir === "income"} onClick={() => setDir("income")} dotClass="bg-emerald-500">
+        <Chip active={dir === "all"} onClick={() => setDir("all")}>{t("common.all")}</Chip>
+        <Chip active={dir === "income"} onClick={() => setDir("income")} dotClass="bg-emerald-500">
           {t("payments.income")}
-        </FilterPill>
-        <FilterPill active={dir === "outcome"} onClick={() => setDir("outcome")} dotClass="bg-red-500">
+        </Chip>
+        <Chip active={dir === "outcome"} onClick={() => setDir("outcome")} dotClass="bg-red-500">
           {t("payments.outcome")}
-        </FilterPill>
+        </Chip>
         <span className="mx-2 h-5 w-px bg-border" />
-        <FilterPill active={status === "all"} onClick={() => setStatus("all")}>{t("common.all")}</FilterPill>
-        <FilterPill active={status === "not_paid"} onClick={() => setStatus("not_paid")}>{t("payments.notPaid")}</FilterPill>
-        <FilterPill active={status === "paid"} onClick={() => setStatus("paid")}>{t("payments.paid")}</FilterPill>
+        <Chip active={status === "all"} onClick={() => setStatus("all")}>{t("common.all")}</Chip>
+        <Chip active={status === "not_paid"} onClick={() => setStatus("not_paid")}>{t("payments.notPaid")}</Chip>
+        <Chip active={status === "paid"} onClick={() => setStatus("paid")}>{t("payments.paid")}</Chip>
       </div>
 
       {/* Table */}
@@ -336,27 +338,29 @@ export function PaymentsPage() {
             </span>
           </div>
           <div className="flex items-center gap-1">
-            <button
-              type="button"
+            <IconButton
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={pageClamped <= 1}
-              className="inline-flex size-8 items-center justify-center rounded-md border border-gray-200 bg-white text-muted-foreground hover:text-foreground hover:border-gray-300 disabled:opacity-40 disabled:hover:text-muted-foreground disabled:hover:border-gray-200"
               title={t("payments.prev")}
+              aria-label={t("payments.prev")}
+              size="lg"
+              className="border border-gray-200 bg-white"
             >
-              <ChevronLeft className="size-4" />
-            </button>
+              <ChevronLeft />
+            </IconButton>
             <span className="px-2 text-muted-foreground" dir="ltr">
               {t("payments.pageOf", { page: pageClamped, total: totalPages })}
             </span>
-            <button
-              type="button"
+            <IconButton
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={pageClamped >= totalPages}
-              className="inline-flex size-8 items-center justify-center rounded-md border border-gray-200 bg-white text-muted-foreground hover:text-foreground hover:border-gray-300 disabled:opacity-40 disabled:hover:text-muted-foreground disabled:hover:border-gray-200"
               title={t("payments.next")}
+              aria-label={t("payments.next")}
+              size="lg"
+              className="border border-gray-200 bg-white"
             >
-              <ChevronRight className="size-4" />
-            </button>
+              <ChevronRight />
+            </IconButton>
           </div>
         </div>
       )}
@@ -390,33 +394,6 @@ function TotalCard({
       </div>
       <div className="mt-2 text-xl font-semibold text-foreground" dir="ltr">₪ {value}</div>
     </div>
-  );
-}
-
-function FilterPill({
-  active,
-  onClick,
-  children,
-  dotClass,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-  dotClass?: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm transition-all ${
-        active
-          ? "border-primary/30 bg-primary/10 font-semibold text-primary"
-          : "border-gray-200 bg-white text-muted-foreground hover:border-gray-300 hover:text-foreground"
-      }`}
-    >
-      {dotClass && <span className={`size-2 rounded-full ${dotClass}`} />}
-      {children}
-    </button>
   );
 }
 
