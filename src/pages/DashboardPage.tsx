@@ -335,9 +335,9 @@ export function DashboardPage() {
                       <button
                         type="button"
                         onClick={() => handleToggleTaskDone(task.id, true)}
-                        className="mt-auto inline-flex items-center gap-1 self-start rounded-md bg-green-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-green-700"
+                        className="mt-auto inline-flex items-center gap-1 self-start rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-foreground shadow-sm transition-colors hover:border-green-300 hover:bg-green-50 hover:text-green-700"
                       >
-                        ✓ {t("tasks.done")}
+                        ✓ {t("tasks.markDone")}
                       </button>
                     </div>
                   );
