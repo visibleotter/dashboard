@@ -700,7 +700,8 @@ export async function listPayments(filters: PaymentFilters = {}): Promise<Paymen
   let q = supabase.from("payments").select(PAYMENT_SELECT);
   if (filters.direction) q = q.eq("direction", filters.direction);
   if (filters.status) q = q.eq("status", filters.status);
-  return unwrap(await q.order("due_date", { ascending: true, nullsFirst: false }));
+  // Latest first — most recent due_date at the top of page 1.
+  return unwrap(await q.order("due_date", { ascending: false, nullsFirst: false }));
 }
 
 /**

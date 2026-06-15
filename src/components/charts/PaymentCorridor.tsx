@@ -1,20 +1,24 @@
 import { useMemo } from "react";
-import type { Payment } from "@/types/db";
+import type { Payment, PaymentDirection } from "@/types/db";
 import { useI18n } from "@/lib/i18n";
 
 /*
-  Income corridor — exact reproduction of the user's Google Sheet logic
-  (Dashboard cells E2:E6 + F2:F6 + G2:G6). Filters: income rows that are
-  NOT paid, bucketed by days-until-due-date.
+  Income / Outcome corridor — reproduction of the user's Sheet logic
+  (Dashboard cells E2:G6). Open (not paid) rows of the chosen direction,
+  bucketed by days-until-due-date:
+    0–7, 8–30, 31–60, >60, Overdue (due_date < today)
 
-  Buckets:
-    0–7d, 8–30d, 31–60d, >60d, Overdue (due_date < today)
-
-  Per bucket: count, sum (₪), comma-joined invoice numbers.
+  Per bucket: count, ₪ sum, comma-joined invoice numbers.
 */
 type Bucket = { key: string; label: string; count: number; sum: number; invoices: string[] };
 
-export function IncomeCorridor({ rows }: { rows: Payment[] }) {
+export function PaymentCorridor({
+  rows,
+  direction,
+}: {
+  rows: Payment[];
+  direction: PaymentDirection;
+}) {
   const { t, lang } = useI18n();
 
   const buckets = useMemo<Bucket[]>(() => {
@@ -31,7 +35,7 @@ export function IncomeCorridor({ rows }: { rows: Payment[] }) {
     ];
 
     for (const r of rows) {
-      if (r.direction !== "income") continue;
+      if (r.direction !== direction) continue;
       if (r.status === "paid") continue;
       if (!r.due_date) continue;
       const due = new Date(r.due_date);
@@ -49,14 +53,18 @@ export function IncomeCorridor({ rows }: { rows: Payment[] }) {
       if (r.invoice_number) b.invoices.push(r.invoice_number);
     }
     return out;
-  }, [rows, t]);
+  }, [rows, direction, t]);
 
   const totalCount = buckets.reduce((s, b) => s + b.count, 0);
   const totalSum = buckets.reduce((s, b) => s + b.sum, 0);
+  const title = direction === "income"
+    ? t("analytics.incomeCorridor")
+    : t("analytics.outcomeCorridor");
+  const accent = direction === "income" ? "text-emerald-700" : "text-red-700";
 
   return (
     <div className="rounded-2xl border bg-card p-5 shadow-card">
-      <h3 className="mb-3 text-sm font-semibold text-foreground">{t("analytics.incomeCorridor")}</h3>
+      <h3 className={`mb-3 text-sm font-semibold ${accent}`}>{title}</h3>
       <table className="w-full text-sm">
         <thead className="text-xs text-muted-foreground">
           <tr className="border-b">

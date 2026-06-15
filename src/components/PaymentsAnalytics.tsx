@@ -5,7 +5,7 @@ import { useI18n } from "@/lib/i18n";
 import type { Payment } from "@/types/db";
 import { MonthlyCashFlowChart } from "@/components/charts/MonthlyCashFlowChart";
 import { PaidVsOpenDonut } from "@/components/charts/PaidVsOpenDonut";
-import { IncomeCorridor } from "@/components/charts/IncomeCorridor";
+import { PaymentCorridor } from "@/components/charts/PaymentCorridor";
 
 /*
   Analytics panel — sits above the payments table on /payments.
@@ -74,9 +74,10 @@ export function PaymentsAnalytics() {
           ) : (
             <div className="grid gap-4">
               <MonthlyCashFlowChart rows={rows} />
+              <PaidVsOpenDonut rows={rows} />
               <div className="grid gap-4 lg:grid-cols-2">
-                <PaidVsOpenDonut rows={rows} />
-                <IncomeCorridor rows={rows} />
+                <PaymentCorridor rows={rows} direction="income" />
+                <PaymentCorridor rows={rows} direction="outcome" />
               </div>
             </div>
           )}

@@ -21,6 +21,7 @@ import { PaymentsAnalytics } from "@/components/PaymentsAnalytics";
 
 type DirFilter = "all" | PaymentDirection;
 type StatusFilter = "all" | PaymentStatus;
+type TotalsRange = "all" | "this_month" | "this_quarter" | "this_year" | "last_30" | "last_90" | "last_365";
 
 export function PaymentsPage() {
   const { t, lang } = useI18n();
@@ -34,6 +35,7 @@ export function PaymentsPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const [totalsRange, setTotalsRange] = useState<TotalsRange>("all");
 
   // Import modal state
   const [showImport, setShowImport] = useState(false);
@@ -115,7 +117,9 @@ export function PaymentsPage() {
 
   const totals = useMemo(() => {
     const m = { income: 0, outcome: 0, openIncome: 0, openOutcome: 0 };
+    const fromIso = rangeFromIso(totalsRange);
     for (const r of rows ?? []) {
+      if (fromIso && (!r.due_date || r.due_date < fromIso)) continue;
       const a = Number(r.price_after_vat ?? 0);
       if (r.direction === "income") {
         m.income += a;
@@ -126,7 +130,7 @@ export function PaymentsPage() {
       }
     }
     return m;
-  }, [rows]);
+  }, [rows, totalsRange]);
 
   const money = (n: number) => n.toLocaleString(lang === "he" ? "he-IL" : "en-GB", { maximumFractionDigits: 0 });
 
@@ -137,22 +141,10 @@ export function PaymentsPage() {
           <h1 className="text-2xl font-semibold">{t("payments.title")}</h1>
           <p className="text-sm text-muted-foreground">{t("payments.subtitle")}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Search className="absolute start-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={t("payments.searchPlaceholder")}
-              className="w-56 rounded-md border border-gray-200 bg-white py-1.5 pe-2.5 ps-7 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/40"
-            />
-          </div>
-          <Button onClick={() => setShowImport(true)}>
-            <Upload className="size-4" />
-            {t("payments.importCsv")}
-          </Button>
-        </div>
+        <Button onClick={() => setShowImport(true)}>
+          <Upload className="size-4" />
+          {t("payments.importCsv")}
+        </Button>
       </div>
 
       {/* Import modal */}
@@ -218,30 +210,63 @@ export function PaymentsPage() {
         <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700 ring-1 ring-green-200">{syncResult}</p>
       )}
 
-      {/* Totals strip */}
-      <div className="grid gap-3 sm:grid-cols-4">
-        <TotalCard label={t("payments.totalIncome")} value={money(totals.income)} tone="emerald" icon={<ArrowDownCircle className="size-5" />} />
-        <TotalCard label={t("payments.openIncome")} value={money(totals.openIncome)} tone="amber" icon={<ArrowDownCircle className="size-5" />} />
-        <TotalCard label={t("payments.totalOutcome")} value={money(totals.outcome)} tone="red" icon={<ArrowUpCircle className="size-5" />} />
-        <TotalCard label={t("payments.openOutcome")} value={money(totals.openOutcome)} tone="amber" icon={<ArrowUpCircle className="size-5" />} />
+      {/* Totals strip with time-range selector */}
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold text-foreground">{t("payments.totalsTitle")}</h2>
+          <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+            {t("payments.range")}
+            <select
+              value={totalsRange}
+              onChange={(e) => setTotalsRange(e.target.value as TotalsRange)}
+              className="rounded-md border border-gray-200 bg-white px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/40"
+            >
+              <option value="all">{t("payments.range_all")}</option>
+              <option value="this_month">{t("payments.range_this_month")}</option>
+              <option value="this_quarter">{t("payments.range_this_quarter")}</option>
+              <option value="this_year">{t("payments.range_this_year")}</option>
+              <option value="last_30">{t("payments.range_last_30")}</option>
+              <option value="last_90">{t("payments.range_last_90")}</option>
+              <option value="last_365">{t("payments.range_last_365")}</option>
+            </select>
+          </label>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-4">
+          <TotalCard label={t("payments.totalIncome")} value={money(totals.income)} tone="emerald" icon={<ArrowDownCircle className="size-5" />} />
+          <TotalCard label={t("payments.openIncome")} value={money(totals.openIncome)} tone="amber" icon={<ArrowDownCircle className="size-5" />} />
+          <TotalCard label={t("payments.totalOutcome")} value={money(totals.outcome)} tone="red" icon={<ArrowUpCircle className="size-5" />} />
+          <TotalCard label={t("payments.openOutcome")} value={money(totals.openOutcome)} tone="amber" icon={<ArrowUpCircle className="size-5" />} />
+        </div>
       </div>
 
       {/* Analytics — cash-flow chart, donuts, income corridor */}
       <PaymentsAnalytics />
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-2">
-        <Chip active={dir === "all"} onClick={() => setDir("all")}>{t("common.all")}</Chip>
-        <Chip active={dir === "income"} onClick={() => setDir("income")} dotClass="bg-emerald-500">
-          {t("payments.income")}
-        </Chip>
-        <Chip active={dir === "outcome"} onClick={() => setDir("outcome")} dotClass="bg-red-500">
-          {t("payments.outcome")}
-        </Chip>
-        <span className="mx-2 h-5 w-px bg-border" />
-        <Chip active={status === "all"} onClick={() => setStatus("all")}>{t("common.all")}</Chip>
-        <Chip active={status === "not_paid"} onClick={() => setStatus("not_paid")}>{t("payments.notPaid")}</Chip>
-        <Chip active={status === "paid"} onClick={() => setStatus("paid")}>{t("payments.paid")}</Chip>
+      {/* Filters + search */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Chip active={dir === "all"} onClick={() => setDir("all")}>{t("common.all")}</Chip>
+          <Chip active={dir === "income"} onClick={() => setDir("income")} dotClass="bg-emerald-500">
+            {t("payments.income")}
+          </Chip>
+          <Chip active={dir === "outcome"} onClick={() => setDir("outcome")} dotClass="bg-red-500">
+            {t("payments.outcome")}
+          </Chip>
+          <span className="mx-2 h-5 w-px bg-border" />
+          <Chip active={status === "all"} onClick={() => setStatus("all")}>{t("common.all")}</Chip>
+          <Chip active={status === "not_paid"} onClick={() => setStatus("not_paid")}>{t("payments.notPaid")}</Chip>
+          <Chip active={status === "paid"} onClick={() => setStatus("paid")}>{t("payments.paid")}</Chip>
+        </div>
+        <div className="relative">
+          <Search className="absolute start-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t("payments.searchPlaceholder")}
+            className="w-56 rounded-md border border-gray-200 bg-white py-1.5 pe-2.5 ps-7 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/40"
+          />
+        </div>
       </div>
 
       {/* Table */}
@@ -472,4 +497,27 @@ function CounterpartyLinkPicker({
       ))}
     </select>
   );
+}
+
+/** Returns the YYYY-MM-DD start date for a totals range filter (or null = no filter). */
+function rangeFromIso(range: TotalsRange): string | null {
+  if (range === "all") return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  let from: Date;
+  if (range === "this_month") {
+    from = new Date(today.getFullYear(), today.getMonth(), 1);
+  } else if (range === "this_quarter") {
+    const qStart = Math.floor(today.getMonth() / 3) * 3;
+    from = new Date(today.getFullYear(), qStart, 1);
+  } else if (range === "this_year") {
+    from = new Date(today.getFullYear(), 0, 1);
+  } else if (range === "last_30") {
+    from = new Date(today); from.setDate(from.getDate() - 30);
+  } else if (range === "last_90") {
+    from = new Date(today); from.setDate(from.getDate() - 90);
+  } else { // last_365
+    from = new Date(today); from.setDate(from.getDate() - 365);
+  }
+  return from.toISOString().slice(0, 10);
 }
