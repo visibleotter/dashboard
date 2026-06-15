@@ -56,6 +56,7 @@ export function CaseFormPage({ mode }: { mode: "create" | "edit" }) {
   const [startDate, setStartDate] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [notes, setNotes] = useState("");
+  const [paymentTerms, setPaymentTerms] = useState("");
   const [createdAt, setCreatedAt] = useState<string | null>(null);
 
   const [spent, setSpent] = useState(0);
@@ -95,6 +96,7 @@ export function CaseFormPage({ mode }: { mode: "create" | "edit" }) {
         setStartDate(c.start_date ?? "");
         setDueDate(c.due_date ?? "");
         setNotes(c.notes ?? "");
+        setPaymentTerms((c as unknown as { payment_terms?: string | null }).payment_terms ?? "");
         setCreatedAt(c.created_at);
       })
       .catch((e) => setError(e.message))
@@ -134,6 +136,7 @@ export function CaseFormPage({ mode }: { mode: "create" | "edit" }) {
       start_date: startDate || null,
       due_date: dueDate || null,
       notes: notes.trim() || null,
+      payment_terms: paymentTerms.trim() || null,
     };
     try {
       if (mode === "create") {
@@ -262,23 +265,28 @@ export function CaseFormPage({ mode }: { mode: "create" | "edit" }) {
               ))}
             </Select>
           </div>
-          <div className="grid gap-2">
-            <Label htmlFor="start_date">{t("caseForm.startDate")}</Label>
-            <Input
-              id="start_date"
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="due_date">{t("caseForm.dueDate")}</Label>
-            <Input
-              id="due_date"
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-            />
+          <div className="grid gap-2 sm:col-span-2">
+            <Label>{t("caseForm.dateRange")}</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <Input
+                id="start_date"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                aria-label={t("caseForm.startDate")}
+              />
+              <Input
+                id="due_date"
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                aria-label={t("caseForm.dueDate")}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+              <span>{t("caseForm.startDate")}</span>
+              <span>{t("caseForm.dueDate")}</span>
+            </div>
           </div>
           <div className="grid gap-2">
             <Label htmlFor="currency">{t("caseForm.currency")}</Label>
@@ -302,6 +310,17 @@ export function CaseFormPage({ mode }: { mode: "create" | "edit" }) {
               onChange={(e) => setTotalAmount(e.target.value)}
             />
           </div>
+        </div>
+
+        <div className="grid gap-2">
+          <Label htmlFor="payment_terms">{t("caseForm.paymentTerms")}</Label>
+          <Input
+            id="payment_terms"
+            value={paymentTerms}
+            onChange={(e) => setPaymentTerms(e.target.value)}
+            placeholder={t("caseForm.paymentTermsPlaceholder")}
+            dir="auto"
+          />
         </div>
 
         <div className="grid gap-2">

@@ -96,6 +96,8 @@ export type Case = {
   start_date: string | null;
   due_date: string | null;
   notes: string | null;
+  /** Contractual payment terms (תנאי תשלום) — free text, e.g. "Net 30", "30/50/20". */
+  payment_terms: string | null;
   created_at: string;
   updated_at: string;
 }

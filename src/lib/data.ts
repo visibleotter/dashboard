@@ -161,6 +161,7 @@ export interface CaseInput {
   start_date?: string | null;
   due_date?: string | null;
   notes?: string | null;
+  payment_terms?: string | null;
 }
 
 export async function createCase(input: CaseInput): Promise<Case> {

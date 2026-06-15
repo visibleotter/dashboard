@@ -1,6 +1,7 @@
 ﻿import { useCallback, useEffect, useState } from "react";
 import { Check, ChevronDown, Paperclip, Plus, Trash2, Upload } from "lucide-react";
 import {
+  createEmployee,
   createExpense,
   createTaxCert,
   deleteExpense,
@@ -137,6 +138,12 @@ function PayslipsSection() {
   const [payslips, setPayslips] = useState<PayslipWithPerson[]>([]);
   const [uploading, setUploading] = useState<string | null>(null); // `${person_id}-${month}`
 
+  // "+ Worker" form state
+  const [addingWorker, setAddingWorker] = useState(false);
+  const [workerName, setWorkerName] = useState("");
+  const [workerRole, setWorkerRole] = useState("");
+  const [savingWorker, setSavingWorker] = useState(false);
+
   const load = useCallback(async () => {
     const [emps, slips] = await Promise.all([listEmployees(), listPayslips(year)]);
     setEmployees(emps);
@@ -144,6 +151,17 @@ function PayslipsSection() {
   }, [year]);
 
   useEffect(() => { load(); }, [load]);
+
+  async function handleAddWorker(e: React.FormEvent) {
+    e.preventDefault();
+    if (!workerName.trim()) return;
+    setSavingWorker(true);
+    try {
+      await createEmployee({ name: workerName.trim(), role: workerRole.trim() || null });
+      setWorkerName(""); setWorkerRole(""); setAddingWorker(false);
+      await load();
+    } finally { setSavingWorker(false); }
+  }
 
   function slipFor(personId: string, month: number) {
     return payslips.find((p) => p.person_id === personId && p.month === month) ?? null;
@@ -167,19 +185,57 @@ function PayslipsSection() {
     }
   }
 
+  const workerControls = (
+    <div className="flex flex-wrap items-center gap-2">
+      {!addingWorker ? (
+        <Button size="sm" variant="outline" onClick={() => setAddingWorker(true)}>
+          <Plus /> {t("accounting.payslips.addWorker")}
+        </Button>
+      ) : (
+        <form onSubmit={handleAddWorker} className="flex flex-wrap items-center gap-1.5 rounded-md border bg-white px-2 py-1.5">
+          <Input
+            autoFocus
+            value={workerName}
+            onChange={(e) => setWorkerName(e.target.value)}
+            placeholder={t("accounting.payslips.workerName")}
+            className="h-7 w-40 text-sm"
+          />
+          <Input
+            value={workerRole}
+            onChange={(e) => setWorkerRole(e.target.value)}
+            placeholder={t("accounting.payslips.workerRole")}
+            className="h-7 w-32 text-sm"
+          />
+          <Button type="submit" size="sm" disabled={savingWorker || !workerName.trim()}>
+            {savingWorker ? "…" : t("common.add")}
+          </Button>
+          <Button type="button" size="sm" variant="ghost" onClick={() => { setAddingWorker(false); setWorkerName(""); setWorkerRole(""); }}>
+            {t("common.cancel")}
+          </Button>
+        </form>
+      )}
+    </div>
+  );
+
   if (employees.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">
-        No employees found. Open any case, go to <strong>Work items</strong>, add a person and mark them as an employee — they will appear here.
-      </p>
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-muted-foreground">{t("accounting.payslips.noEmployeesNew")}</p>
+          {workerControls}
+        </div>
+      </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <span className="text-sm text-muted-foreground">{t("accounting.year")}</span>
-        <YearSelect value={year} onChange={setYear} />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-muted-foreground">{t("accounting.year")}</span>
+          <YearSelect value={year} onChange={setYear} />
+        </div>
+        {workerControls}
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-gray-200">
