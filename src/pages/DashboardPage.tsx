@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ChevronDown, ChevronRight, Calendar, ClipboardList } from "lucide-react";
+import { ChevronDown, ChevronRight, Calendar, ClipboardList, Pencil, Plus } from "lucide-react";
 import {
   listCasesWithDocs,
   listSpendByCase,
@@ -28,6 +28,14 @@ import type { CaseGroup, WorkStatus } from "@/types/db";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Chip, ChipCount } from "@/components/ui/chip";
+import { IconButton } from "@/components/ui/icon-button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { ALL_TASK_PRIORITIES, taskPriorityLabel as taskPrioLbl } from "@/lib/labels";
+import type { TaskPriority } from "@/types/db";
+import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ── WorkStatus inline picker ───────────────────────────────────────────────
@@ -104,6 +112,7 @@ export function DashboardPage() {
   const [groupFilter, setGroupFilter] = useState<CaseGroup | "all">("all");
   const [spendByCase, setSpendByCase] = useState<Map<string, number>>(new Map());
   const [reviewOpen, setReviewOpen] = useState(() => new Date().getDay() === 0);
+  const [editingTask, setEditingTask] = useState<TaskWithCase | null>(null);
 
   useEffect(() => {
     listCasesWithDocs().then(setCases).catch((e) => setError(e.message));
@@ -177,7 +186,7 @@ export function DashboardPage() {
           <p className="text-sm text-muted-foreground">{t("dashboard.subtitle")}</p>
         </div>
         <Button asChild className="bg-brand-gradient text-white shadow-glow hover:opacity-90">
-          <Link to="/cases/new">+ {t("dashboard.newCase")}</Link>
+          <Link to="/cases/new"><Plus />{t("dashboard.newCase")}</Link>
         </Button>
       </div>
 
@@ -278,7 +287,7 @@ export function DashboardPage() {
             <div className="rounded-2xl border border-dashed bg-card p-12 text-center">
               <p className="text-sm text-muted-foreground">{t("dashboard.empty")}</p>
               <Button asChild className="mt-4 bg-brand-gradient text-white shadow-glow hover:opacity-90">
-                <Link to="/cases/new">+ {t("dashboard.newCase")}</Link>
+                <Link to="/cases/new"><Plus />{t("dashboard.newCase")}</Link>
               </Button>
             </div>
           ) : (
@@ -318,9 +327,20 @@ export function DashboardPage() {
                   return (
                     <div
                       key={task.id}
-                      className="group flex flex-col gap-2 rounded-xl border p-3 transition-colors hover:border-primary/30 hover:bg-primary/5"
+                      className="group relative flex flex-col gap-2 rounded-xl border p-3 transition-colors hover:border-primary/30 hover:bg-primary/5"
                     >
-                      <div className="text-sm font-medium text-foreground line-clamp-2">
+                      <div className="absolute end-2 top-2 hidden group-hover:block">
+                        <IconButton
+                          variant="primary"
+                          size="sm"
+                          onClick={() => setEditingTask(task)}
+                          title={t("tasks.editTask")}
+                          aria-label={t("tasks.editTask")}
+                        >
+                          <Pencil />
+                        </IconButton>
+                      </div>
+                      <div className="text-sm font-medium text-foreground line-clamp-2 pe-7">
                         {task.text}
                       </div>
                       {task.notes && (
@@ -356,6 +376,15 @@ export function DashboardPage() {
           <RecentFiles />
         </>
       )}
+
+      <EditTaskModal
+        task={editingTask}
+        onClose={() => setEditingTask(null)}
+        onSaved={async () => {
+          setEditingTask(null);
+          setTasks(await listTasks());
+        }}
+      />
     </div>
   );
 }
@@ -521,3 +550,124 @@ function CaseRow({
   );
 }
 
+
+// ── Edit Task Modal ────────────────────────────────────────────────────────
+
+function EditTaskModal({
+  task,
+  onClose,
+  onSaved,
+}: {
+  task: TaskWithCase | null;
+  onClose: () => void;
+  onSaved: () => Promise<void> | void;
+}) {
+  const { t, tl } = useI18n();
+  const [text, setText] = useState("");
+  const [notes, setNotes] = useState("");
+  const [priority, setPriority] = useState<TaskPriority>("med");
+  const [dueDate, setDueDate] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  // Sync form when task changes
+  useEffect(() => {
+    if (!task) return;
+    setText(task.text);
+    setNotes(task.notes ?? "");
+    setPriority(task.priority);
+    setDueDate(task.due_date ?? "");
+    setErr(null);
+  }, [task]);
+
+  // ESC closes
+  useEffect(() => {
+    if (!task) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape" && !saving) onClose(); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [task, saving, onClose]);
+
+  if (!task) return null;
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    if (!text.trim() || !task) return;
+    setSaving(true);
+    setErr(null);
+    try {
+      await updateTask(task.id, {
+        text: text.trim(),
+        notes: notes.trim() || null,
+        priority,
+        due_date: dueDate || null,
+      });
+      await onSaved();
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div
+      role="presentation"
+      onClick={() => !saving && onClose()}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
+    >
+      <form
+        role="dialog"
+        aria-modal="true"
+        onClick={(e) => e.stopPropagation()}
+        onSubmit={handleSave}
+        className="w-full max-w-md space-y-3 rounded-2xl border bg-card p-5 shadow-card"
+      >
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold text-foreground">{t("tasks.editTask")}</h2>
+          <IconButton onClick={onClose} disabled={saving} aria-label={t("common.cancel")}>
+            <X />
+          </IconButton>
+        </div>
+
+        {err && <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{err}</p>}
+
+        <div className="grid gap-1.5">
+          <Label htmlFor="et-text">{t("tasks.task")}</Label>
+          <Input id="et-text" value={text} onChange={(e) => setText(e.target.value)} required />
+        </div>
+        <div className="grid gap-1.5">
+          <Label htmlFor="et-notes">{t("tasks.notes")}</Label>
+          <Textarea
+            id="et-notes"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder={t("tasks.notesPlaceholder")}
+            rows={3}
+          />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-1.5">
+            <Label htmlFor="et-prio">{t("tasks.priority")}</Label>
+            <Select id="et-prio" value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)}>
+              {ALL_TASK_PRIORITIES.map((p) => (
+                <option key={p} value={p}>{tl(taskPrioLbl[p])}</option>
+              ))}
+            </Select>
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="et-due">{t("tasks.dueDate")}</Label>
+            <Input id="et-due" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-2 pt-1">
+          <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>{t("common.cancel")}</Button>
+          <Button type="submit" disabled={saving || !text.trim()}>
+            {saving ? t("common.saving") : t("common.save")}
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+}

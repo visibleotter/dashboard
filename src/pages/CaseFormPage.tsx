@@ -7,6 +7,7 @@ import {
   listCases,
   listCaseTypes,
   listChildCases,
+  listSpendByCase,
   updateCase,
   type CaseWithRelations,
 } from "@/lib/data";
@@ -30,7 +31,6 @@ import { DocumentsSection } from "@/components/DocumentsSection";
 import { MilestonesSection } from "@/components/MilestonesSection";
 import { CaseTimeline } from "@/components/CaseTimeline";
 import { SpendSummary } from "@/components/SpendSummary";
-import { WorkItemsSection } from "@/components/WorkItemsSection";
 import { TaskBoard } from "@/components/TaskBoard";
 
 const CURRENCIES = ["ILS", "USD", "CNY", "EUR"];
@@ -100,6 +100,7 @@ export function CaseFormPage({ mode }: { mode: "create" | "edit" }) {
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
     listChildCases(id).then(setChildren).catch(() => setChildren([]));
+    listSpendByCase().then((m) => setSpent(m.get(id) ?? 0)).catch(() => setSpent(0));
   }, [mode, id]);
 
   // Parent options: any case except self (prevents the simplest cycle).
@@ -330,8 +331,6 @@ export function CaseFormPage({ mode }: { mode: "create" | "edit" }) {
         />
       )}
 
-      {mode === "edit" && id && <WorkItemsSection caseId={id} onSpentChange={setSpent} />}
-
       {mode === "edit" && id && <TaskBoard caseId={id} />}
 
       {mode === "edit" && id && <MilestonesSection caseId={id} />}
@@ -347,7 +346,7 @@ export function CaseFormPage({ mode }: { mode: "create" | "edit" }) {
               {t("caseForm.childrenTitle")} ({children.length})
             </h2>
             <Button asChild variant="outline" size="sm">
-              <Link to={`/cases/new?parent=${id}`}>+ {t("caseForm.addChild")}</Link>
+              <Link to={`/cases/new?parent=${id}`}>{t("caseForm.addChild")}</Link>
             </Button>
           </div>
           {children.length === 0 ? (

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ChevronDown, ExternalLink, Pencil, Trash2, X } from "lucide-react";
+import { ChevronDown, ExternalLink, Pencil, Plus, Trash2, X } from "lucide-react";
 import {
   deleteCase,
   listCasesWithDocs,
@@ -333,7 +333,7 @@ export function CasesListPage() {
         <div className="rounded-lg border border-dashed p-10 text-center">
           <p className="text-sm text-muted-foreground">{t("cases.empty")}</p>
           <Button asChild className="mt-4">
-            <Link to="/cases/new">+ {t("cases.newCase")}</Link>
+            <Link to="/cases/new"><Plus />{t("cases.newCase")}</Link>
           </Button>
         </div>
       )}

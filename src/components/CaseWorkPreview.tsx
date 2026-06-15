@@ -1,25 +1,19 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Trash2, X } from "lucide-react";
 import {
   createOrder,
   createTask,
-  createWorkItem,
   deleteOrder,
   deleteTask,
-  deleteWorkItem,
-  listAllOrders,
   listCounterparties,
   listOrders,
   listTasksForCase,
-  listWorkItems,
   updateOrder,
   updateTask,
   type OrderWithRefs,
-  type WorkItemWithRefs,
 } from "@/lib/data";
 import { useI18n } from "@/lib/i18n";
 import { formatDate } from "@/lib/dates";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -30,37 +24,27 @@ import type { Counterparty, TaskRow } from "@/types/db";
 const FIELD =
   "rounded border border-gray-200 bg-white px-2 py-1 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/40";
 
+/*
+  Inline preview rendered under an expanded project row on the dashboard.
+  Shows the case's orders and linked tasks — work items have been removed,
+  tasks are now the single concept for "things to do".
+*/
 export function CaseWorkPreview({ caseId }: { caseId: string }) {
   const { t, lang } = useI18n();
-  const [items, setItems] = useState<WorkItemWithRefs[] | null>(null);
-  const [orders, setOrders] = useState<OrderWithRefs[]>([]);
+  const [orders, setOrders] = useState<OrderWithRefs[] | null>(null);
   const [tasks, setTasks] = useState<TaskRow[]>([]);
   const [counterparties, setCounterparties] = useState<Counterparty[]>([]);
-  const [allOrders, setAllOrders] = useState<OrderWithRefs[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // add-work-item form state (now includes optional attached order)
-  const [addingWI, setAddingWI] = useState(false);
-  const [wiName, setWiName] = useState("");
-  const [wiCost, setWiCost] = useState("");
-  const [wiAttachOrder, setWiAttachOrder] = useState(false);
-  const [wiOrderMode, setWiOrderMode] = useState<"new" | "existing">("new");
-  const [wiOrderExistingId, setWiOrderExistingId] = useState("");
-  const [wiOrderTitle, setWiOrderTitle] = useState("");
-  const [wiOrderPrice, setWiOrderPrice] = useState("");
-  const [wiOrderSupplier, setWiOrderSupplier] = useState("");
-  const [wiOrderDate, setWiOrderDate] = useState("");
-  const [savingWI, setSavingWI] = useState(false);
-
-  // add-order form: keyed by work_item_id (or "" for unassigned)
-  const [addingOrderFor, setAddingOrderFor] = useState<string | null>(null);
+  // add-order form
+  const [addingOrder, setAddingOrder] = useState(false);
   const [orderTitle, setOrderTitle] = useState("");
   const [orderPrice, setOrderPrice] = useState("");
   const [orderSupplier, setOrderSupplier] = useState("");
   const [orderDate, setOrderDate] = useState("");
   const [savingOrder, setSavingOrder] = useState(false);
 
-  // inline edit-order state
+  // inline edit-order
   const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
   const [editOrderTitle, setEditOrderTitle] = useState("");
   const [editOrderPrice, setEditOrderPrice] = useState("");
@@ -74,15 +58,21 @@ export function CaseWorkPreview({ caseId }: { caseId: string }) {
   const [taskDue, setTaskDue] = useState("");
   const [savingTask, setSavingTask] = useState(false);
 
+  // polymorphic delete dialog (order | task)
+  const [pendingDelete, setPendingDelete] = useState<
+    | { kind: "order"; id: string }
+    | { kind: "task"; id: string }
+    | null
+  >(null);
+  const [deleting, setDeleting] = useState(false);
+
   const money = (n: number) => n.toLocaleString(lang === "he" ? "he-IL" : "en-GB");
 
   async function load() {
-    const [wi, ord, tks] = await Promise.all([
-      listWorkItems(caseId),
+    const [ord, tks] = await Promise.all([
       listOrders(caseId),
       listTasksForCase(caseId),
     ]);
-    setItems(wi);
     setOrders(ord);
     setTasks(tks);
   }
@@ -90,147 +80,37 @@ export function CaseWorkPreview({ caseId }: { caseId: string }) {
   useEffect(() => {
     let active = true;
     Promise.all([
-      listWorkItems(caseId),
       listOrders(caseId),
       listTasksForCase(caseId),
       listCounterparties(),
-      listAllOrders(),
     ])
-      .then(([wi, ord, tks, cps, allOrd]) => {
+      .then(([ord, tks, cps]) => {
         if (!active) return;
-        setItems(wi);
         setOrders(ord);
         setTasks(tks);
         setCounterparties(cps);
-        setAllOrders(allOrd);
       })
       .catch((e) => setError(e.message));
     return () => { active = false; };
   }, [caseId]);
 
-  const ordersByWi = useMemo(() => {
-    const m = new Map<string, OrderWithRefs[]>();
-    for (const o of orders) {
-      if (!o.work_item_id) continue;
-      const arr = m.get(o.work_item_id) ?? [];
-      arr.push(o);
-      m.set(o.work_item_id, arr);
-    }
-    return m;
-  }, [orders]);
-  const unassigned = useMemo(() => orders.filter((o) => !o.work_item_id), [orders]);
-
-  // Existing orders available to clone — exclude this case's own orders to avoid noise.
-  const reusableOrders = useMemo(
-    () => allOrders.filter((o) => o.case_id !== caseId),
-    [allOrders, caseId],
-  );
-
   // ── Handlers ─────────────────────────────────────────────────────────────
-
-  // Polymorphic delete confirmation: one dialog handles workItems / orders / tasks
-  const [pendingDelete, setPendingDelete] = useState<
-    | { kind: "wi"; id: string }
-    | { kind: "order"; id: string }
-    | { kind: "task"; id: string }
-    | null
-  >(null);
-  const [deleting, setDeleting] = useState(false);
-
-  const deleteLabels: Record<"wi" | "order" | "task", string> = {
-    wi: t("workItems.deleteConfirm"),
-    order: t("orders.deleteConfirm"),
-    task: t("inlineTasks.deleteConfirm"),
-  };
-
-  async function confirmDelete() {
-    if (!pendingDelete) return;
-    setDeleting(true);
-    try {
-      if (pendingDelete.kind === "wi") await deleteWorkItem(pendingDelete.id);
-      else if (pendingDelete.kind === "order") await deleteOrder(pendingDelete.id);
-      else if (pendingDelete.kind === "task") await deleteTask(pendingDelete.id);
-      setPendingDelete(null);
-      await load();
-    } finally {
-      setDeleting(false);
-    }
-  }
-
-  function handleDeleteWI(id: string) { setPendingDelete({ kind: "wi", id }); }
-  function handleDeleteOrder(id: string) { setPendingDelete({ kind: "order", id }); }
-
-  function resetWIForm() {
-    setWiName(""); setWiCost("");
-    setWiAttachOrder(false);
-    setWiOrderMode("new");
-    setWiOrderExistingId("");
-    setWiOrderTitle(""); setWiOrderPrice(""); setWiOrderSupplier(""); setWiOrderDate("");
-    setAddingWI(false);
-  }
-
-  async function handleAddWI(e: React.FormEvent) {
-    e.preventDefault();
-    if (!wiName.trim()) return;
-    setSavingWI(true);
-    try {
-      const newWI = await createWorkItem({
-        case_id: caseId,
-        name: wiName.trim(),
-        cost: wiCost ? Number(wiCost) : null,
-      });
-      // Optional attached order
-      if (wiAttachOrder) {
-        if (wiOrderMode === "existing" && wiOrderExistingId) {
-          const source = reusableOrders.find((o) => o.id === wiOrderExistingId);
-          if (source) {
-            await createOrder({
-              case_id: caseId,
-              work_item_id: newWI.id,
-              title: source.title,
-              price: source.price,
-              currency: source.currency,
-              supplier_id: source.supplier_id,
-              order_date: source.order_date,
-              tracking_number: source.tracking_number,
-              notes: source.notes,
-            });
-          }
-        } else if (wiOrderMode === "new" && wiOrderTitle.trim()) {
-          await createOrder({
-            case_id: caseId,
-            work_item_id: newWI.id,
-            title: wiOrderTitle.trim(),
-            price: wiOrderPrice ? Number(wiOrderPrice) : null,
-            supplier_id: wiOrderSupplier || null,
-            order_date: wiOrderDate || null,
-          });
-        }
-      }
-      resetWIForm();
-      await load();
-    } finally { setSavingWI(false); }
-  }
-
-  function openOrderForm(workItemId: string) {
-    setAddingOrderFor(workItemId);
-    setOrderTitle(""); setOrderPrice(""); setOrderSupplier(""); setOrderDate("");
-  }
 
   async function handleAddOrder(e: React.FormEvent) {
     e.preventDefault();
-    if (!orderTitle.trim() || addingOrderFor === null) return;
+    if (!orderTitle.trim()) return;
     setSavingOrder(true);
     try {
       await createOrder({
         case_id: caseId,
-        work_item_id: addingOrderFor || null,
+        work_item_id: null,
         title: orderTitle.trim(),
         price: orderPrice ? Number(orderPrice) : null,
         supplier_id: orderSupplier || null,
         order_date: orderDate || null,
       });
-      setAddingOrderFor(null);
+      setOrderTitle(""); setOrderPrice(""); setOrderSupplier(""); setOrderDate("");
+      setAddingOrder(false);
       await load();
     } finally { setSavingOrder(false); }
   }
@@ -275,46 +155,30 @@ export function CaseWorkPreview({ caseId }: { caseId: string }) {
   }
 
   async function handleToggleTask(task: TaskRow) {
-    // Optimistic toggle
     setTasks((prev) => prev.map((t) => t.id === task.id ? { ...t, done: !t.done } : t));
     await updateTask(task.id, { done: !task.done });
   }
 
-  function handleDeleteTask(id: string) { setPendingDelete({ kind: "task", id }); }
+  async function confirmDelete() {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    try {
+      if (pendingDelete.kind === "order") await deleteOrder(pendingDelete.id);
+      else await deleteTask(pendingDelete.id);
+      setPendingDelete(null);
+      await load();
+    } finally { setDeleting(false); }
+  }
 
   if (error) return <p className="px-4 pb-3 text-xs text-destructive">{error}</p>;
-  if (items === null) return <p className="px-4 pb-3 text-xs text-muted-foreground">{t("common.loading")}</p>;
+  if (orders === null) return <p className="px-4 pb-3 text-xs text-muted-foreground">{t("common.loading")}</p>;
 
-  // ── Inline forms ─────────────────────────────────────────────────────────
+  // ── Render ───────────────────────────────────────────────────────────────
 
-  const addOrderForm = () => (
-    <form onSubmit={handleAddOrder} className="ms-6 mt-1 flex flex-wrap items-center gap-1.5 rounded-lg border bg-gray-50 px-3 py-2">
-      <input
-        autoFocus
-        className={`min-w-0 flex-1 ${FIELD}`}
-        placeholder={t("orders.name")}
-        value={orderTitle}
-        onChange={(e) => setOrderTitle(e.target.value)}
-      />
-      <input type="number" step="0.01" className={`w-20 ${FIELD}`} placeholder={t("orders.price")} value={orderPrice} onChange={(e) => setOrderPrice(e.target.value)} />
-      <select className={FIELD} value={orderSupplier} onChange={(e) => setOrderSupplier(e.target.value)}>
-        <option value="">— {t("orders.supplier")} —</option>
-        {counterparties.map((cp) => <option key={cp.id} value={cp.id}>{cp.name}</option>)}
-      </select>
-      <input type="date" className={FIELD} value={orderDate} onChange={(e) => setOrderDate(e.target.value)} />
-      <Button type="submit" size="sm" disabled={savingOrder || !orderTitle.trim()}>
-        {savingOrder ? "…" : t("common.add")}
-      </Button>
-      <IconButton size="sm" onClick={() => setAddingOrderFor(null)} aria-label={t("common.cancel")}>
-        <X />
-      </IconButton>
-    </form>
-  );
-
-  const editOrderForm = () => (
+  const editOrderForm = (
     <form
       onSubmit={handleSaveOrderEdit}
-      className="ms-6 mt-1 flex flex-wrap items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2"
+      className="flex flex-wrap items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2"
     >
       <input
         autoFocus
@@ -338,225 +202,121 @@ export function CaseWorkPreview({ caseId }: { caseId: string }) {
     </form>
   );
 
-  const orderLine = (o: OrderWithRefs) => {
-    if (editingOrderId === o.id) return <div key={o.id}>{editOrderForm()}</div>;
-    return (
-      <div
-        key={o.id}
-        className="group flex items-center justify-between gap-3 ps-6 pe-2 py-1 text-xs hover:bg-gray-50 rounded cursor-pointer"
-        onClick={() => openOrderEdit(o)}
-        title={t("orders.editClick")}
-      >
-        <span className="min-w-0 truncate text-muted-foreground">
-          ↳ {o.title}
-          {o.supplier?.name ? ` · ${o.supplier.name}` : ""}
-          {o.order_date ? ` · ${formatDate(o.order_date, lang)}` : ""}
-        </span>
-        <div
-          className="flex shrink-0 items-center gap-2"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <span dir="ltr">{o.price != null ? `${money(Number(o.price))} ${o.currency ?? ""}` : "—"}</span>
-          <AttachmentList entityType="order" entityId={o.id} compact />
-          <IconButton
-            variant="destructive"
-            size="sm"
-            onClick={(e) => { e.stopPropagation(); handleDeleteOrder(o.id); }}
-            title={t("orders.deleteConfirm")}
-            aria-label={t("orders.deleteConfirm")}
-            className="hidden group-hover:inline-flex"
-          >
-            <Trash2 />
-          </IconButton>
-        </div>
-      </div>
-    );
-  };
-
-  // ── Render ───────────────────────────────────────────────────────────────
-
   return (
-    <div className="space-y-1.5 border-t bg-gray-50/60 px-4 py-3">
-      {/* Work items + nested orders */}
-      {items.map((w) => (
-        <div key={w.id} className="rounded-lg border bg-white px-3 py-2">
-          <div className="group flex flex-wrap items-center justify-between gap-2">
-            <div className="flex min-w-0 items-center gap-2">
-              <span className="truncate text-sm font-medium text-foreground">{w.name}</span>
-              {w.status && (
-                <Badge className="bg-sky-50 text-sky-700 ring-1 ring-sky-200 text-xs">{w.status}</Badge>
-              )}
-              {w.assignee?.name && (
-                <span className="text-xs text-muted-foreground">{w.assignee.name}</span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              {w.cost != null && (
-                <span className="text-xs text-muted-foreground" dir="ltr">{money(Number(w.cost))} ₪</span>
-              )}
-              <button
-                type="button"
-                onClick={() => openOrderForm(w.id)}
-                className="hidden items-center gap-1 text-xs text-primary hover:underline group-hover:flex"
-              >
-                <Plus className="size-3" /> {t("orders.add")}
-              </button>
-              <IconButton
-                variant="destructive"
-                size="sm"
-                onClick={() => handleDeleteWI(w.id)}
-                aria-label={t("workItems.deleteConfirm")}
-                title={t("workItems.deleteConfirm")}
-                className="hidden group-hover:inline-flex"
-              >
-                <Trash2 />
-              </IconButton>
-            </div>
-          </div>
-
-          {(ordersByWi.get(w.id) ?? []).map(orderLine)}
-          {addingOrderFor === w.id && addOrderForm()}
+    <div className="space-y-3 border-t bg-gray-50/60 px-4 py-3">
+      {/* Orders */}
+      <div className="rounded-lg border bg-white px-3 py-2">
+        <div className="mb-1 flex items-center justify-between">
+          <span className="text-xs font-medium text-muted-foreground">{t("orders.title")}</span>
+          {!addingOrder && (
+            <Button size="sm" variant="outline" onClick={() => setAddingOrder(true)}>
+              <Plus />
+              {t("orders.add")}
+            </Button>
+          )}
         </div>
-      ))}
 
-      {/* Unassigned orders */}
-      {unassigned.length > 0 && (
-        <div className="rounded-lg border bg-white px-3 py-2">
-          <div className="group flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">{t("orders.unassigned")}</span>
-            <button
-              type="button"
-              onClick={() => openOrderForm("")}
-              className="hidden items-center gap-1 text-xs text-primary hover:underline group-hover:flex"
-            >
-              <Plus className="size-3" /> {t("orders.add")}
-            </button>
-          </div>
-          {unassigned.map(orderLine)}
-          {addingOrderFor === "" && addOrderForm()}
-        </div>
-      )}
-
-      {/* Add work item — with optional attached order */}
-      {addingWI ? (
-        <form onSubmit={handleAddWI} className="space-y-2 rounded-lg border bg-white px-3 py-2.5">
-          <div className="flex flex-wrap items-center gap-1.5">
+        {addingOrder && (
+          <form onSubmit={handleAddOrder} className="mb-1.5 flex flex-wrap items-center gap-1.5 rounded-lg border bg-gray-50 px-3 py-2">
             <input
               autoFocus
-              className={`min-w-0 flex-1 ${FIELD} text-sm`}
-              placeholder={t("workItems.namePlaceholder")}
-              value={wiName}
-              onChange={(e) => setWiName(e.target.value)}
+              className={`min-w-0 flex-1 ${FIELD}`}
+              placeholder={t("orders.name")}
+              value={orderTitle}
+              onChange={(e) => setOrderTitle(e.target.value)}
             />
-            <input type="number" step="0.01" className={`w-24 ${FIELD} text-sm`} placeholder={t("workItems.cost")} value={wiCost} onChange={(e) => setWiCost(e.target.value)} />
-          </div>
+            <input type="number" step="0.01" className={`w-20 ${FIELD}`} placeholder={t("orders.price")} value={orderPrice} onChange={(e) => setOrderPrice(e.target.value)} />
+            <select className={FIELD} value={orderSupplier} onChange={(e) => setOrderSupplier(e.target.value)}>
+              <option value="">— {t("orders.supplier")} —</option>
+              {counterparties.map((cp) => <option key={cp.id} value={cp.id}>{cp.name}</option>)}
+            </select>
+            <input type="date" className={FIELD} value={orderDate} onChange={(e) => setOrderDate(e.target.value)} />
+            <Button type="submit" size="sm" disabled={savingOrder || !orderTitle.trim()}>
+              {savingOrder ? "…" : t("common.add")}
+            </Button>
+            <IconButton size="sm" onClick={() => setAddingOrder(false)} aria-label={t("common.cancel")}>
+              <X />
+            </IconButton>
+          </form>
+        )}
 
-          {/* Optional attach-order toggle */}
-          {!wiAttachOrder ? (
-            <button
-              type="button"
-              onClick={() => setWiAttachOrder(true)}
-              className="flex items-center gap-1 text-xs text-primary hover:underline"
+        {orders.length === 0 && !addingOrder && (
+          <p className="px-1 py-1 text-xs text-muted-foreground italic">{t("orders.none")}</p>
+        )}
+
+        {orders.map((o) => {
+          if (editingOrderId === o.id) return <div key={o.id}>{editOrderForm}</div>;
+          return (
+            <div
+              key={o.id}
+              className="group flex items-center justify-between gap-3 rounded px-1 py-1 text-xs hover:bg-gray-50 cursor-pointer"
+              onClick={() => openOrderEdit(o)}
+              title={t("orders.editClick")}
             >
-              <Plus className="size-3" /> {t("orders.attach")}
-            </button>
-          ) : (
-            <div className="space-y-1.5 rounded-md bg-gray-50 p-2">
-              <div className="flex items-center justify-between text-xs">
-                <div className="inline-flex gap-1 rounded-full bg-white p-0.5 ring-1 ring-gray-200">
-                  <button
-                    type="button"
-                    onClick={() => setWiOrderMode("new")}
-                    className={`rounded-full px-2 py-0.5 ${wiOrderMode === "new" ? "bg-primary text-white" : "text-muted-foreground"}`}
-                  >
-                    {t("orders.newOne")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setWiOrderMode("existing")}
-                    className={`rounded-full px-2 py-0.5 ${wiOrderMode === "existing" ? "bg-primary text-white" : "text-muted-foreground"}`}
-                  >
-                    {t("orders.pickExisting")}
-                  </button>
-                </div>
-                <IconButton size="sm" onClick={() => setWiAttachOrder(false)} aria-label={t("common.cancel")}>
-                  <X />
+              <span className="min-w-0 truncate text-muted-foreground">
+                ↳ {o.title}
+                {o.supplier?.name ? ` · ${o.supplier.name}` : ""}
+                {o.order_date ? ` · ${formatDate(o.order_date, lang)}` : ""}
+              </span>
+              <div
+                className="flex shrink-0 items-center gap-2"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <span dir="ltr">{o.price != null ? `${money(Number(o.price))} ${o.currency ?? ""}` : "—"}</span>
+                <AttachmentList entityType="order" entityId={o.id} compact />
+                <IconButton
+                  variant="destructive"
+                  size="sm"
+                  onClick={(e) => { e.stopPropagation(); setPendingDelete({ kind: "order", id: o.id }); }}
+                  title={t("orders.deleteConfirm")}
+                  aria-label={t("orders.deleteConfirm")}
+                  className="hidden group-hover:inline-flex"
+                >
+                  <Trash2 />
                 </IconButton>
               </div>
-
-              {wiOrderMode === "new" ? (
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <input className={`min-w-0 flex-1 ${FIELD}`} placeholder={t("orders.name")} value={wiOrderTitle} onChange={(e) => setWiOrderTitle(e.target.value)} />
-                  <input type="number" step="0.01" className={`w-20 ${FIELD}`} placeholder={t("orders.price")} value={wiOrderPrice} onChange={(e) => setWiOrderPrice(e.target.value)} />
-                  <select className={FIELD} value={wiOrderSupplier} onChange={(e) => setWiOrderSupplier(e.target.value)}>
-                    <option value="">— {t("orders.supplier")} —</option>
-                    {counterparties.map((cp) => <option key={cp.id} value={cp.id}>{cp.name}</option>)}
-                  </select>
-                  <input type="date" className={FIELD} value={wiOrderDate} onChange={(e) => setWiOrderDate(e.target.value)} />
-                </div>
-              ) : reusableOrders.length === 0 ? (
-                <p className="text-xs text-muted-foreground">{t("orders.noOrdersYet")}</p>
-              ) : (
-                <select
-                  className={`${FIELD} w-full`}
-                  value={wiOrderExistingId}
-                  onChange={(e) => setWiOrderExistingId(e.target.value)}
-                >
-                  <option value="">— {t("orders.pickExisting")} —</option>
-                  {reusableOrders.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.title}
-                      {o.supplier?.name ? ` · ${o.supplier.name}` : ""}
-                      {o.price != null ? ` · ${money(Number(o.price))} ${o.currency ?? ""}` : ""}
-                    </option>
-                  ))}
-                </select>
-              )}
             </div>
+          );
+        })}
+      </div>
+
+      {/* Tasks */}
+      <div className="rounded-lg border bg-white px-3 py-2">
+        <div className="mb-1 flex items-center justify-between">
+          <span className="text-xs font-medium text-muted-foreground">{t("tasks.title")}</span>
+          {!addingTask && (
+            <Button size="sm" variant="outline" onClick={() => setAddingTask(true)}>
+              <Plus />
+              {t("inlineTasks.add")}
+            </Button>
           )}
+        </div>
 
-          <div className="flex items-center gap-2 pt-0.5">
-            <Button type="submit" size="sm" disabled={savingWI || !wiName.trim()}>
-              {savingWI ? "…" : t("common.add")}
+        {addingTask && (
+          <form onSubmit={handleAddTask} className="mb-1.5 flex flex-wrap items-center gap-1.5">
+            <input
+              autoFocus
+              className={`min-w-0 flex-1 ${FIELD}`}
+              placeholder={t("inlineTasks.addPlaceholder")}
+              value={taskText}
+              onChange={(e) => setTaskText(e.target.value)}
+            />
+            <input type="date" className={FIELD} value={taskDue} onChange={(e) => setTaskDue(e.target.value)} />
+            <Button type="submit" size="sm" disabled={savingTask || !taskText.trim()}>
+              {savingTask ? "…" : t("common.add")}
             </Button>
-            <Button type="button" size="sm" variant="ghost" onClick={resetWIForm}>
-              {t("common.cancel")}
-            </Button>
-          </div>
-        </form>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setAddingWI(true)}
-          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary"
-        >
-          <Plus className="size-3.5" /> {t("workItems.add")}
-        </button>
-      )}
-
-      {/* Add unassigned order shortcut when no work items exist */}
-      {items.length === 0 && unassigned.length === 0 && addingOrderFor === null && (
-        <button
-          type="button"
-          onClick={() => openOrderForm("")}
-          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary"
-        >
-          <Plus className="size-3.5" /> {t("orders.add")}
-        </button>
-      )}
-      {items.length === 0 && addingOrderFor === "" && addOrderForm()}
-
-      {/* Tasks section */}
-      <div className="mt-2 rounded-lg border bg-white px-3 py-2">
-        <div className="mb-1 text-xs font-medium text-muted-foreground">{t("tasks.title")}</div>
-        {tasks.length === 0 && !addingTask && (
-          <p className="text-xs text-muted-foreground">{t("inlineTasks.none")}</p>
+            <IconButton size="sm" onClick={() => { setAddingTask(false); setTaskText(""); setTaskDue(""); }} aria-label={t("common.cancel")}>
+              <X />
+            </IconButton>
+          </form>
         )}
+
+        {tasks.length === 0 && !addingTask && (
+          <p className="px-1 py-1 text-xs text-muted-foreground italic">{t("inlineTasks.none")}</p>
+        )}
+
         {tasks.map((tk) => (
-          <div
-            key={tk.id}
-            className="group flex items-center gap-2 py-1 text-xs"
-          >
+          <div key={tk.id} className="group flex items-center gap-2 py-1 text-xs">
             <input
               type="checkbox"
               checked={tk.done}
@@ -573,7 +333,7 @@ export function CaseWorkPreview({ caseId }: { caseId: string }) {
             <IconButton
               variant="destructive"
               size="sm"
-              onClick={() => handleDeleteTask(tk.id)}
+              onClick={() => setPendingDelete({ kind: "task", id: tk.id })}
               aria-label={t("inlineTasks.deleteConfirm")}
               title={t("inlineTasks.deleteConfirm")}
               className="hidden group-hover:inline-flex"
@@ -582,37 +342,11 @@ export function CaseWorkPreview({ caseId }: { caseId: string }) {
             </IconButton>
           </div>
         ))}
-        {addingTask ? (
-          <form onSubmit={handleAddTask} className="mt-1 flex flex-wrap items-center gap-1.5">
-            <input
-              autoFocus
-              className={`min-w-0 flex-1 ${FIELD}`}
-              placeholder={t("inlineTasks.addPlaceholder")}
-              value={taskText}
-              onChange={(e) => setTaskText(e.target.value)}
-            />
-            <input type="date" className={FIELD} value={taskDue} onChange={(e) => setTaskDue(e.target.value)} />
-            <Button type="submit" size="sm" disabled={savingTask || !taskText.trim()}>
-              {savingTask ? "…" : t("common.add")}
-            </Button>
-            <IconButton size="sm" onClick={() => { setAddingTask(false); setTaskText(""); setTaskDue(""); }} aria-label={t("common.cancel")}>
-              <X />
-            </IconButton>
-          </form>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setAddingTask(true)}
-            className="mt-1 flex items-center gap-1 text-xs text-primary hover:underline"
-          >
-            <Plus className="size-3" /> {t("inlineTasks.add")}
-          </button>
-        )}
       </div>
 
       <ConfirmDialog
         open={pendingDelete !== null}
-        title={pendingDelete ? deleteLabels[pendingDelete.kind] : ""}
+        title={pendingDelete?.kind === "order" ? t("orders.deleteConfirm") : t("inlineTasks.deleteConfirm")}
         confirmLabel={t("common.delete")}
         cancelLabel={t("common.cancel")}
         busy={deleting}

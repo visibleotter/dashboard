@@ -8,11 +8,9 @@ import {
   listCases,
   listCounterparties,
   listTasks,
-  listWorkItems,
   updateTask,
   type CaseWithRelations,
   type TaskWithCase,
-  type WorkItemWithRefs,
 } from "@/lib/data";
 import { useI18n } from "@/lib/i18n";
 import { ALL_TASK_PRIORITIES, taskPriorityLabel } from "@/lib/labels";
@@ -43,8 +41,6 @@ export function TasksPage() {
   // Order is linked to the SAME case as the task. Requires a case to be picked.
   const [counterparties, setCounterparties] = useState<Counterparty[]>([]);
   const [attachOrder, setAttachOrder] = useState(false);
-  const [oWorkItems, setOWorkItems] = useState<WorkItemWithRefs[]>([]);
-  const [oWorkItemId, setOWorkItemId] = useState("");
   const [oTitle, setOTitle] = useState("");
   const [oPrice, setOPrice] = useState("");
   const [oSupplier, setOSupplier] = useState("");
@@ -56,16 +52,9 @@ export function TasksPage() {
     listCounterparties().then(setCounterparties).catch(() => setCounterparties([]));
   }, []);
 
-  // When the task's case changes, refresh the work-item picker for the order
-  useEffect(() => {
-    setOWorkItemId("");
-    if (!caseId) { setOWorkItems([]); return; }
-    listWorkItems(caseId).then(setOWorkItems).catch(() => setOWorkItems([]));
-  }, [caseId]);
-
   function resetAttachedOrder() {
     setAttachOrder(false);
-    setOWorkItemId(""); setOTitle(""); setOPrice(""); setOSupplier(""); setODate("");
+    setOTitle(""); setOPrice(""); setOSupplier(""); setODate("");
   }
 
   async function refresh() {
@@ -93,7 +82,7 @@ export function TasksPage() {
       if (attachOrder && caseId && oTitle.trim()) {
         await createOrder({
           case_id: caseId,
-          work_item_id: oWorkItemId || null,
+          work_item_id: null,
           title: oTitle.trim(),
           price: oPrice ? Number(oPrice) : null,
           supplier_id: oSupplier || null,
@@ -259,20 +248,6 @@ export function TasksPage() {
                 <div className="grid gap-1">
                   <Label htmlFor="o-title" className="text-xs">{t("orders.name")} *</Label>
                   <Input id="o-title" value={oTitle} onChange={(e) => setOTitle(e.target.value)} required />
-                </div>
-                <div className="grid gap-1">
-                  <Label htmlFor="o-wi" className="text-xs">{t("orders.workItem")}</Label>
-                  <Select
-                    id="o-wi"
-                    value={oWorkItemId}
-                    onChange={(e) => setOWorkItemId(e.target.value)}
-                    disabled={oWorkItems.length === 0}
-                  >
-                    <option value="">— {t("orders.unassigned")} —</option>
-                    {oWorkItems.map((w) => (
-                      <option key={w.id} value={w.id}>{w.name}</option>
-                    ))}
-                  </Select>
                 </div>
                 <div className="grid gap-1">
                   <Label htmlFor="o-supplier" className="text-xs">{t("orders.supplier")}</Label>

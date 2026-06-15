@@ -19,8 +19,8 @@
   },
   "attachments": {
     "title": "Files",
-    "add": "+ Attach",
-    "addLink": "+ Link",
+    "add": "Attach",
+    "addLink": "Link",
     "linkUrlPlaceholder": "https://drive.google.com/…",
     "linkLabelPlaceholder": "Label (optional)",
     "empty": "No files.",
@@ -148,14 +148,14 @@
   },
   "people": {
     "label": "Assignee",
-    "new": "+ New",
+    "new": "New",
     "name": "Name",
     "role": "Role",
     "none": "— None —"
   },
   "workItems": {
     "title": "Work items",
-    "add": "+ Work item",
+    "add": "Work item",
     "name": "Name",
     "namePlaceholder": "Mechanical design...",
     "stage": "Stage",
@@ -168,7 +168,7 @@
   },
   "orders": {
     "title": "Orders",
-    "add": "+ Order",
+    "add": "Order",
     "supplier": "Supplier",
     "name": "Description",
     "price": "Price",
@@ -187,7 +187,7 @@
     "noOrdersYet": "No existing orders to pick."
   },
   "inlineTasks": {
-    "add": "+ Task",
+    "add": "Task",
     "addPlaceholder": "What to do…",
     "none": "No tasks linked.",
     "deleteConfirm": "Delete this task?"
@@ -235,7 +235,7 @@
   },
   "counterparty": {
     "label": "Counterparty",
-    "new": "+ New",
+    "new": "New",
     "name": "Name",
     "none": "— None —"
   },
@@ -266,7 +266,7 @@
   "milestones": {
     "title": "Payment milestones",
     "openTotal": "open {amount}",
-    "add": "+ Payment",
+    "add": "Payment",
     "label": "Label",
     "labelPlaceholder": "Deposit 30%",
     "amount": "Amount",
@@ -298,6 +298,7 @@
     "noDate": "No date",
     "done": "Done",
     "markDone": "Mark done",
+    "editTask": "Edit task",
     "deleteConfirm": "Delete this task?",
     "attachOrderNeedsCase": "Pick a case first — orders must belong to a case.",
     "notes": "Notes",
@@ -337,10 +338,23 @@
       "employee": "Employee",
       "received": "Received",
       "noEmployees": "No employees found.",
-      "months": ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+      "months": [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec"
+      ]
     },
     "taxCerts": {
-      "add": "+ Tax Cert",
+      "add": "Tax Cert",
       "kind": "Type",
       "kindWithholding": "Withholding cert",
       "kindForm101": "Form 101",
@@ -350,7 +364,7 @@
       "noCerts": "No tax certificates."
     },
     "expenses": {
-      "add": "+ Expense",
+      "add": "Expense",
       "supplier": "Supplier",
       "invoiceNumber": "Invoice #",
       "category": "Category",
@@ -366,7 +380,20 @@
     "opCosts": {
       "total": "TOTAL",
       "noCategories": "No cost categories configured.",
-      "monthLabels": ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+      "monthLabels": [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec"
+      ]
     }
   },
   "kb": {

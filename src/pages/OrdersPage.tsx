@@ -9,11 +9,9 @@ import {
   listAllOrders,
   listCases,
   listCounterparties,
-  listWorkItems,
   updateOrder,
   type CaseWithRelations,
   type OrderWithRefs,
-  type WorkItemWithRefs,
 } from "@/lib/data";
 import { useI18n } from "@/lib/i18n";
 import { formatDate } from "@/lib/dates";
@@ -38,8 +36,6 @@ export function OrdersPage() {
 
   // Add-order form state
   const [caseId, setCaseId] = useState("");
-  const [workItems, setWorkItems] = useState<WorkItemWithRefs[]>([]);
-  const [workItemId, setWorkItemId] = useState("");
   const [title, setTitle] = useState("");
   const [supplier, setSupplier] = useState("");
   const [price, setPrice] = useState("");
@@ -61,12 +57,6 @@ export function OrdersPage() {
   }, []);
 
   // Refresh work items dropdown when the chosen case changes
-  useEffect(() => {
-    setWorkItemId("");
-    if (!caseId) { setWorkItems([]); return; }
-    listWorkItems(caseId).then(setWorkItems).catch(() => setWorkItems([]));
-  }, [caseId]);
-
   async function refresh() {
     setOrders(await listAllOrders());
   }
@@ -79,14 +69,13 @@ export function OrdersPage() {
     try {
       await createOrder({
         case_id: caseId,
-        work_item_id: workItemId || null,
+        work_item_id: null,
         title: title.trim(),
         price: price ? Number(price) : null,
         supplier_id: supplier || null,
         order_date: date || null,
       });
       setTitle(""); setPrice(""); setSupplier(""); setDate("");
-      setWorkItemId("");
       await refresh();
     } catch (e) {
       setError((e as Error).message);
@@ -196,20 +185,6 @@ export function OrdersPage() {
             </Select>
           </div>
           <div className="grid gap-1.5">
-            <Label htmlFor="o-wi">{t("orders.workItem")}</Label>
-            <Select
-              id="o-wi"
-              value={workItemId}
-              onChange={(e) => setWorkItemId(e.target.value)}
-              disabled={!caseId || workItems.length === 0}
-            >
-              <option value="">— {t("orders.unassigned")} —</option>
-              {workItems.map((w) => (
-                <option key={w.id} value={w.id}>{w.name}</option>
-              ))}
-            </Select>
-          </div>
-          <div className="grid gap-1.5">
             <Label htmlFor="o-title">{t("orders.name")} *</Label>
             <Input id="o-title" value={title} onChange={(e) => setTitle(e.target.value)} required />
           </div>
@@ -294,7 +269,6 @@ export function OrdersPage() {
                       <div className="min-w-0 flex-1">
                         <div className="text-sm font-medium text-foreground">{o.title}</div>
                         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                          {o.work_item?.name && <span>↳ {o.work_item.name}</span>}
                           {o.supplier?.name && <span>· {o.supplier.name}</span>}
                           {o.order_date && <span dir="ltr">· {formatDate(o.order_date, lang)}</span>}
                         </div>
