@@ -41,8 +41,11 @@ export type Lang = "he" | "en";
 
 export function formatDate(dateStr: string | null, lang: Lang = "he"): string {
   if (!dateStr) return "—";
-  const [y, m, d] = dateStr.split("-").map(Number);
-  return new Date(y, (m ?? 1) - 1, d ?? 1).toLocaleDateString(
+  // Accept both YYYY-MM-DD and full ISO timestamps (e.g. uploaded_at).
+  const datePart = dateStr.slice(0, 10);
+  const [y, m, d] = datePart.split("-").map(Number);
+  if (!y || !m || !d) return "—";
+  return new Date(y, m - 1, d).toLocaleDateString(
     lang === "he" ? "he-IL" : "en-GB",
     { day: "2-digit", month: "2-digit", year: "numeric" },
   );

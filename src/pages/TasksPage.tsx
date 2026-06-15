@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus, X } from "lucide-react";
+import { Plus, Trash2, X } from "lucide-react";
 import {
   createOrder,
   createTask,
@@ -19,6 +19,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { URGENCY_ORDER, formatDate, relativeDays, urgencyMeta, urgencyOf } from "@/lib/dates";
 import type { Counterparty, TaskPriority } from "@/types/db";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
@@ -156,9 +157,14 @@ export function TasksPage() {
           </div>
           <Badge className={taskPriorityLabel[task.priority].cls}>{tl(taskPriorityLabel[task.priority])}</Badge>
           <AttachmentList entityType="task" entityId={task.id} compact />
-          <Button type="button" variant="ghost" size="sm" onClick={() => remove(task)}>
-            {t("common.delete")}
-          </Button>
+          <IconButton
+            variant="destructive"
+            onClick={() => remove(task)}
+            aria-label={t("common.delete")}
+            title={t("common.delete")}
+          >
+            <Trash2 />
+          </IconButton>
         </li>
       ))}
     </ul>

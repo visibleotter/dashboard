@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { FileText, FileSpreadsheet, FileType, FileImage, Link as LinkIcon, Paperclip, Plus, Trash2, X } from "lucide-react";
+import { FileText, FileSpreadsheet, FileType, FileImage, Link as LinkIcon, Plus, X } from "lucide-react";
 import {
   createAttachmentLink,
   deleteAttachment,
@@ -8,18 +8,20 @@ import {
   uploadAttachment,
 } from "@/lib/data";
 import { useI18n } from "@/lib/i18n";
-import { formatDate } from "@/lib/dates";
-import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
+import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { Attachment, AttachmentEntityType } from "@/types/db";
 
 /**
- * Reusable file list for tasks/orders. Self-contained: fetches its own list,
- * refreshes after upload/delete. Drops into any row.
+ * Inline files list for tasks / orders. Self-contained: fetches its own list,
+ * refreshes after upload/delete.
  *
- * Compact mode shows just a paperclip + count chip that expands on click.
- * Non-compact (default) renders the full list inline.
+ * Compact mode (default for inline use): files render as small chips ALWAYS
+ * visible — no click-to-expand. Add controls live at the end of the chip row:
+ * a primary "+" icon button (file picker) and a link-icon button (URL form).
+ *
+ * Non-compact: full-width panel with a heading and a vertical list.
  */
 export function AttachmentList({
   entityType,
@@ -30,11 +32,10 @@ export function AttachmentList({
   entityId: string;
   compact?: boolean;
 }) {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [items, setItems] = useState<Attachment[] | null>(null);
-  const [open, setOpen] = useState(!compact);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,7 +62,6 @@ export function AttachmentList({
         await uploadAttachment(entityType, entityId, f);
       }
       setItems(await listAttachments(entityType, entityId));
-      setOpen(true);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -86,7 +86,6 @@ export function AttachmentList({
 
   async function handleOpen(a: Attachment) {
     try {
-      // Link row: open the external URL directly. File row: fetch a signed URL.
       const url = a.external_url ?? (a.storage_path ? await getAttachmentUrl(a.storage_path) : null);
       if (!url) throw new Error("Attachment has no target");
       window.open(url, "_blank", "noopener,noreferrer");
@@ -97,6 +96,7 @@ export function AttachmentList({
 
   async function handleAddLink(e: React.FormEvent) {
     e.preventDefault();
+    e.stopPropagation();
     if (!linkUrl.trim()) return;
     setSavingLink(true);
     setError(null);
@@ -111,29 +111,76 @@ export function AttachmentList({
     }
   }
 
-  const count = items?.length ?? 0;
+  const items_ = items ?? [];
 
-  // Compact chip — toggles the expanded list
-  if (compact && !open) {
+  if (compact) {
     return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        title={t("attachments.title")}
-        className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-muted-foreground hover:bg-gray-200 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+      <div
+        className="inline-flex flex-wrap items-center gap-1.5"
+        onClick={(e) => e.stopPropagation()}
       >
-        <Paperclip className="size-3" />
-        {count > 0 ? count : "+"}
-      </button>
+        {items_.map((a) => (
+          <FileChip key={a.id} a={a} onOpen={handleOpen} onDelete={(x) => setPendingDelete(x)} />
+        ))}
+        <IconButton
+          variant="primary"
+          size="sm"
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading}
+          title={t("attachments.add")}
+          aria-label={t("attachments.add")}
+        >
+          <Plus />
+        </IconButton>
+        <IconButton
+          variant="default"
+          size="sm"
+          onClick={() => setLinkForm((v) => !v)}
+          title={t("attachments.addLink")}
+          aria-label={t("attachments.addLink")}
+        >
+          <LinkIcon />
+        </IconButton>
+        <input
+          ref={fileRef}
+          type="file"
+          multiple
+          className="hidden"
+          onChange={(e) => handleFiles(e.target.files)}
+        />
+        {linkForm && (
+          <LinkForm
+            url={linkUrl}
+            setUrl={setLinkUrl}
+            label={linkLabel}
+            setLabel={setLinkLabel}
+            saving={savingLink}
+            onSubmit={handleAddLink}
+            onCancel={() => { setLinkForm(false); setLinkUrl(""); setLinkLabel(""); }}
+            t={t}
+          />
+        )}
+        {error && <span className="text-xs text-destructive">{error}</span>}
+
+        <ConfirmDialog
+          open={pendingDelete !== null}
+          title={t("attachments.deleteConfirm")}
+          confirmLabel={t("common.delete")}
+          cancelLabel={t("common.cancel")}
+          busy={deleting}
+          onConfirm={confirmDelete}
+          onCancel={() => setPendingDelete(null)}
+        />
+      </div>
     );
   }
 
+  // Full (non-compact) panel
   return (
-    <div className="space-y-1.5 rounded-md border bg-gray-50/60 px-2 py-2">
+    <div className="space-y-2 rounded-md border bg-gray-50/60 px-3 py-2.5">
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-muted-foreground">
-          <Paperclip className="me-1 inline-block size-3" />
-          {t("attachments.title")} {count > 0 && `(${count})`}
+          {t("attachments.title")} {items_.length > 0 && `(${items_.length})`}
         </span>
         <div className="flex items-center gap-1">
           <Button
@@ -150,16 +197,6 @@ export function AttachmentList({
           >
             <LinkIcon /> {t("attachments.addLink")}
           </Button>
-          {compact && (
-            <IconButton
-              onClick={() => setOpen(false)}
-              size="sm"
-              title={t("common.cancel")}
-              aria-label={t("common.cancel")}
-            >
-              <X />
-            </IconButton>
-          )}
           <input
             ref={fileRef}
             type="file"
@@ -170,83 +207,31 @@ export function AttachmentList({
         </div>
       </div>
 
-      {/* Inline + Link form */}
-      {linkForm && (
-        <form onSubmit={handleAddLink} className="flex flex-wrap items-center gap-1.5 rounded border border-gray-200 bg-white px-2 py-1.5">
-          <input
-            autoFocus
-            type="url"
-            value={linkUrl}
-            onChange={(e) => setLinkUrl(e.target.value)}
-            placeholder={t("attachments.linkUrlPlaceholder")}
-            dir="ltr"
-            className="min-w-0 flex-1 rounded border border-gray-200 bg-white px-2 py-0.5 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/40"
-            required
-          />
-          <input
-            type="text"
-            value={linkLabel}
-            onChange={(e) => setLinkLabel(e.target.value)}
-            placeholder={t("attachments.linkLabelPlaceholder")}
-            className="w-32 rounded border border-gray-200 bg-white px-2 py-0.5 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/40"
-          />
-          <Button type="submit" size="sm" disabled={savingLink || !linkUrl.trim()}>
-            {savingLink ? "…" : t("common.add")}
-          </Button>
-          <IconButton
-            size="sm"
-            onClick={() => { setLinkForm(false); setLinkUrl(""); setLinkLabel(""); }}
-            aria-label={t("common.cancel")}
-          >
-            <X />
-          </IconButton>
-        </form>
-      )}
-
       {error && <p className="text-xs text-destructive">{error}</p>}
+
+      {linkForm && (
+        <LinkForm
+          url={linkUrl}
+          setUrl={setLinkUrl}
+          label={linkLabel}
+          setLabel={setLinkLabel}
+          saving={savingLink}
+          onSubmit={handleAddLink}
+          onCancel={() => { setLinkForm(false); setLinkUrl(""); setLinkLabel(""); }}
+          t={t}
+        />
+      )}
 
       {items === null ? (
         <p className="text-xs text-muted-foreground">{t("common.loading")}</p>
       ) : items.length === 0 ? (
         <p className="text-xs text-muted-foreground">{t("attachments.empty")}</p>
       ) : (
-        <ul className="space-y-0.5">
-          {items.map((a) => {
-            const isLink = !!a.external_url;
-            const display = a.original_filename
-              ?? (isLink ? hostOf(a.external_url!) : a.storage_path?.split("/").pop() ?? "—");
-            return (
-              <li key={a.id} className="group flex items-center gap-2 text-xs">
-                {isLink ? (
-                  <LinkIcon className="size-3.5 shrink-0 text-blue-500" />
-                ) : (
-                  <FileIcon mime={a.mime_type} filename={a.original_filename} />
-                )}
-                <button
-                  type="button"
-                  onClick={() => handleOpen(a)}
-                  className="min-w-0 flex-1 truncate text-start text-primary hover:underline"
-                  title={isLink ? (a.external_url ?? "") : (a.original_filename ?? "")}
-                >
-                  {display}
-                </button>
-                <span className="shrink-0 text-muted-foreground" dir="ltr">
-                  {formatDate(a.uploaded_at, lang)}
-                </span>
-                <IconButton
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => setPendingDelete(a)}
-                  title={t("attachments.deleteConfirm")}
-                  aria-label={t("attachments.deleteConfirm")}
-                  className="hidden group-hover:inline-flex"
-                >
-                  <Trash2 />
-                </IconButton>
-              </li>
-            );
-          })}
-        </ul>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {items.map((a) => (
+            <FileChip key={a.id} a={a} onOpen={handleOpen} onDelete={(x) => setPendingDelete(x)} />
+          ))}
+        </div>
       )}
 
       <ConfirmDialog
@@ -262,10 +247,107 @@ export function AttachmentList({
   );
 }
 
-// ── shared file-type icon (also used by RecentFiles) ────────────────────────
+// ── File chip (file or link) — always visible ──────────────────────────────
+
+function FileChip({
+  a,
+  onOpen,
+  onDelete,
+}: {
+  a: Attachment;
+  onOpen: (a: Attachment) => void;
+  onDelete: (a: Attachment) => void;
+}) {
+  const isLink = !!a.external_url;
+  const display = a.original_filename
+    ?? (isLink ? hostOf(a.external_url!) : a.storage_path?.split("/").pop() ?? "—");
+
+  return (
+    <span className="group inline-flex max-w-[200px] items-center gap-1 rounded-md border border-gray-200 bg-white px-1.5 py-0.5 text-xs">
+      {isLink ? (
+        <LinkIcon className="size-3 shrink-0 text-blue-500" />
+      ) : (
+        <FileIcon mime={a.mime_type} filename={a.original_filename} />
+      )}
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onOpen(a); }}
+        className="min-w-0 truncate text-start text-primary hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/30 rounded"
+        title={isLink ? (a.external_url ?? "") : (a.original_filename ?? "")}
+      >
+        {display}
+      </button>
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onDelete(a); }}
+        className="hidden text-muted-foreground hover:text-red-500 group-hover:inline-flex"
+        title="Delete"
+        aria-label="Delete"
+      >
+        <X className="size-3" />
+      </button>
+    </span>
+  );
+}
+
+// ── Inline + Link form ─────────────────────────────────────────────────────
+
+function LinkForm({
+  url,
+  setUrl,
+  label,
+  setLabel,
+  saving,
+  onSubmit,
+  onCancel,
+  t,
+}: {
+  url: string;
+  setUrl: (v: string) => void;
+  label: string;
+  setLabel: (v: string) => void;
+  saving: boolean;
+  onSubmit: (e: React.FormEvent) => void;
+  onCancel: () => void;
+  t: (k: string) => string;
+}) {
+  return (
+    <form
+      onSubmit={onSubmit}
+      onClick={(e) => e.stopPropagation()}
+      className="flex flex-wrap items-center gap-1 rounded-md border border-gray-200 bg-white px-1.5 py-1"
+    >
+      <input
+        autoFocus
+        type="url"
+        value={url}
+        onChange={(e) => setUrl(e.target.value)}
+        placeholder={t("attachments.linkUrlPlaceholder")}
+        dir="ltr"
+        className="min-w-[12rem] flex-1 rounded border border-gray-200 bg-white px-2 py-0.5 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/40"
+        required
+      />
+      <input
+        type="text"
+        value={label}
+        onChange={(e) => setLabel(e.target.value)}
+        placeholder={t("attachments.linkLabelPlaceholder")}
+        className="w-28 rounded border border-gray-200 bg-white px-2 py-0.5 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/40"
+      />
+      <Button type="submit" size="sm" disabled={saving || !url.trim()}>
+        {saving ? "…" : t("common.add")}
+      </Button>
+      <IconButton size="sm" onClick={onCancel} aria-label={t("common.cancel")}>
+        <X />
+      </IconButton>
+    </form>
+  );
+}
+
+// ── shared file-type icon ──────────────────────────────────────────────────
 
 export function FileIcon({ mime, filename }: { mime: string | null; filename: string | null }) {
-  const cls = "size-3.5 shrink-0";
+  const cls = "size-3 shrink-0";
   const ext = (filename?.split(".").pop() ?? "").toLowerCase();
   if (mime?.startsWith("image/")) return <FileImage className={`${cls} text-emerald-500`} />;
   if (mime === "application/pdf" || ext === "pdf") return <FileText className={`${cls} text-red-500`} />;
@@ -285,7 +367,6 @@ export function FileIcon({ mime, filename }: { mime: string | null; filename: st
   return <FileType className={`${cls} text-muted-foreground`} />;
 }
 
-/** "drive.google.com/…" → "drive.google.com" — short display label for a URL. */
 function hostOf(url: string): string {
   try { return new URL(url).host.replace(/^www\./, ""); }
   catch { return url; }
