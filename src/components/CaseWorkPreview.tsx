@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { AttachmentList } from "@/components/AttachmentList";
+import { TaskOrdersInline } from "@/components/TaskOrdersInline";
 import type { Counterparty, TaskRow } from "@/types/db";
 
 // ─── Shared input style ────────────────────────────────────────────────────
@@ -316,30 +317,33 @@ export function CaseWorkPreview({ caseId }: { caseId: string }) {
         )}
 
         {tasks.map((tk) => (
-          <div key={tk.id} className="group flex items-center gap-2 py-1 text-xs">
-            <input
-              type="checkbox"
-              checked={tk.done}
-              onChange={() => handleToggleTask(tk)}
-              className="size-3.5 accent-primary"
-            />
-            <span className={`min-w-0 flex-1 truncate ${tk.done ? "text-muted-foreground line-through" : "text-foreground"}`}>
-              {tk.text}
-            </span>
-            {tk.due_date && (
-              <span className="text-muted-foreground" dir="ltr">{formatDate(tk.due_date, lang)}</span>
-            )}
-            <AttachmentList entityType="task" entityId={tk.id} compact />
-            <IconButton
-              variant="destructive"
-              size="sm"
-              onClick={() => setPendingDelete({ kind: "task", id: tk.id })}
-              aria-label={t("inlineTasks.deleteConfirm")}
-              title={t("inlineTasks.deleteConfirm")}
-              className="hidden group-hover:inline-flex"
-            >
-              <Trash2 />
-            </IconButton>
+          <div key={tk.id} className="py-1">
+            <div className="group flex items-center gap-2 text-xs">
+              <input
+                type="checkbox"
+                checked={tk.done}
+                onChange={() => handleToggleTask(tk)}
+                className="size-3.5 accent-primary"
+              />
+              <span className={`min-w-0 flex-1 truncate ${tk.done ? "text-muted-foreground line-through" : "text-foreground"}`}>
+                {tk.text}
+              </span>
+              {tk.due_date && (
+                <span className="text-muted-foreground" dir="ltr">{formatDate(tk.due_date, lang)}</span>
+              )}
+              <AttachmentList entityType="task" entityId={tk.id} compact />
+              <IconButton
+                variant="destructive"
+                size="sm"
+                onClick={() => setPendingDelete({ kind: "task", id: tk.id })}
+                aria-label={t("inlineTasks.deleteConfirm")}
+                title={t("inlineTasks.deleteConfirm")}
+                className="hidden group-hover:inline-flex"
+              >
+                <Trash2 />
+              </IconButton>
+            </div>
+            <TaskOrdersInline taskId={tk.id} caseId={caseId} />
           </div>
         ))}
       </div>

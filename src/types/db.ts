@@ -306,7 +306,10 @@ export type OrderRow = {
   work_item_id: string | null;
   supplier_id: string | null;
   title: string;
+  /** Unit price. Total = price × quantity. */
   price: number | null;
+  /** Defaults to 1. Total = price × quantity. */
+  quantity: number;
   currency: string | null;
   order_date: string | null;
   status: string | null;
@@ -314,6 +317,15 @@ export type OrderRow = {
   notes: string | null;
   created_at: string;
   updated_at: string;
+};
+
+/** Many-to-many link: a single order can supply several tasks across projects. */
+export type OrderTaskLink = {
+  id: string;
+  order_id: string;
+  task_id: string;
+  quantity: number;
+  created_at: string;
 };
 
 // ---- Database generic for the typed Supabase client ----
@@ -386,8 +398,14 @@ export interface Database {
       };
       orders: {
         Row: OrderRow;
-        Insert: Insertable<OrderRow, DefaultCols | "currency">;
+        Insert: Insertable<OrderRow, DefaultCols | "currency" | "quantity">;
         Update: Partial<OrderRow>;
+        Relationships: [];
+      };
+      order_tasks: {
+        Row: OrderTaskLink;
+        Insert: Insertable<OrderTaskLink, "id" | "created_at" | "quantity">;
+        Update: Partial<OrderTaskLink>;
         Relationships: [];
       };
       payslips: {

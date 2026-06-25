@@ -194,7 +194,11 @@
     "newOne": "חדשה",
     "fromProject": "מתוך",
     "editClick": "לחץ לעריכה",
-    "noOrdersYet": "אין הזמנות קיימות לבחירה."
+    "noOrdersYet": "אין הזמנות קיימות לבחירה.",
+    "quantity": "כמות",
+    "priceUnit": "מחיר ליחידה",
+    "linkOrCreate": "קישור הזמנה",
+    "unlink": "הסר מהמשימה"
   },
   "inlineTasks": {
     "add": "משימה",

@@ -13,6 +13,7 @@ import type {
   OpCostCategory,
   OpCostEntry,
   OrderRow,
+  OrderTaskLink,
   Payment,
   PaymentDirection,
   PaymentStatus,
@@ -1110,6 +1111,7 @@ export interface OrderInput {
   supplier_id?: string | null;
   title: string;
   price?: number | null;
+  quantity?: number;
   currency?: string | null;
   order_date?: string | null;
   status?: string | null;
@@ -1127,6 +1129,92 @@ export async function updateOrder(id: string, patch: Partial<Omit<OrderInput, "c
 
 export async function deleteOrder(id: string): Promise<void> {
   const { error } = await supabase.from("orders").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+// ---- order_tasks (0015): many-to-many between orders and tasks -----------
+
+export interface LinkedOrderForTask {
+  link_id: string;
+  order: OrderWithRefs;
+  quantity: number;
+}
+
+export interface LinkedTaskForOrder {
+  link_id: string;
+  task: { id: string; text: string; case: { id: string; title: string } | null };
+  quantity: number;
+}
+
+/** Orders linked to a given task, with the per-link quantity. */
+export async function listOrdersForTask(taskId: string): Promise<LinkedOrderForTask[]> {
+  const res = await supabase
+    .from("order_tasks")
+    .select(`
+      id,
+      quantity,
+      order:orders(
+        *,
+        supplier:counterparties(id, name),
+        work_item:work_items(id, name)
+      )
+    `)
+    .eq("task_id", taskId)
+    .order("created_at", { ascending: true });
+  if (res.error) throw new Error(res.error.message);
+  const rows = (res.data ?? []) as unknown as { id: string; quantity: number; order: OrderWithRefs }[];
+  return rows.map((r) => ({
+    link_id: r.id,
+    quantity: Number(r.quantity ?? 1),
+    order: r.order,
+  }));
+}
+
+/** Tasks linked to a given order, with the per-link quantity and parent case. */
+export async function listTasksForOrder(orderId: string): Promise<LinkedTaskForOrder[]> {
+  const res = await supabase
+    .from("order_tasks")
+    .select(`
+      id,
+      quantity,
+      task:tasks(id, text, case:cases(id, title))
+    `)
+    .eq("order_id", orderId)
+    .order("created_at", { ascending: true });
+  if (res.error) throw new Error(res.error.message);
+  const rows = (res.data ?? []) as unknown as { id: string; quantity: number; task: LinkedTaskForOrder["task"] }[];
+  return rows.map((r) => ({
+    link_id: r.id,
+    quantity: Number(r.quantity ?? 1),
+    task: r.task,
+  }));
+}
+
+export async function linkOrderToTask(
+  orderId: string,
+  taskId: string,
+  quantity = 1,
+): Promise<OrderTaskLink> {
+  return unwrap(
+    await supabase
+      .from("order_tasks")
+      .insert({ order_id: orderId, task_id: taskId, quantity })
+      .select("*")
+      .single(),
+  );
+}
+
+export async function updateOrderTaskLink(
+  linkId: string,
+  patch: { quantity?: number },
+): Promise<OrderTaskLink> {
+  return unwrap(
+    await supabase.from("order_tasks").update(patch).eq("id", linkId).select("*").single(),
+  );
+}
+
+export async function unlinkOrderFromTask(linkId: string): Promise<void> {
+  const { error } = await supabase.from("order_tasks").delete().eq("id", linkId);
   if (error) throw new Error(error.message);
 }
 
@@ -1149,20 +1237,18 @@ export async function listAllOrders(): Promise<OrderWithRefs[]> {
  * "Spent" = Σ task Total Sum, where Total Sum = task cost + its orders' prices). Map<caseId, spent>.
  */
 export async function listSpendByCase(): Promise<Map<string, number>> {
-  const [ordersRes, wiRes] = await Promise.all([
-    supabase.from("orders").select("case_id, price"),
-    supabase.from("work_items").select("case_id, cost"),
-  ]);
+  const ordersRes = await supabase.from("orders").select("case_id, price, quantity");
   if (ordersRes.error) throw new Error(ordersRes.error.message);
-  if (wiRes.error) throw new Error(wiRes.error.message);
 
   const map = new Map<string, number>();
   const add = (id: string, n: number | null) => {
     if (n == null) return;
     map.set(id, (map.get(id) ?? 0) + Number(n));
   };
-  for (const r of (ordersRes.data ?? []) as Pick<OrderRow, "case_id" | "price">[]) add(r.case_id, r.price);
-  for (const r of (wiRes.data ?? []) as Pick<WorkItem, "case_id" | "cost">[]) add(r.case_id, r.cost);
+  for (const r of (ordersRes.data ?? []) as Pick<OrderRow, "case_id" | "price" | "quantity">[]) {
+    if (r.price == null) continue;
+    add(r.case_id, Number(r.price) * Number(r.quantity ?? 1));
+  }
   return map;
 }
 

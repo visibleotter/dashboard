@@ -39,6 +39,7 @@ export function OrdersPage() {
   const [title, setTitle] = useState("");
   const [supplier, setSupplier] = useState("");
   const [price, setPrice] = useState("");
+  const [quantity, setQuantity] = useState("1");
   const [date, setDate] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -72,10 +73,11 @@ export function OrdersPage() {
         work_item_id: null,
         title: title.trim(),
         price: price ? Number(price) : null,
+        quantity: quantity ? Number(quantity) : 1,
         supplier_id: supplier || null,
         order_date: date || null,
       });
-      setTitle(""); setPrice(""); setSupplier(""); setDate("");
+      setTitle(""); setPrice(""); setQuantity("1"); setSupplier(""); setDate("");
       await refresh();
     } catch (e) {
       setError((e as Error).message);
@@ -198,8 +200,12 @@ export function OrdersPage() {
             </Select>
           </div>
           <div className="grid gap-1.5">
-            <Label htmlFor="o-price">{t("orders.price")}</Label>
+            <Label htmlFor="o-price">{t("orders.priceUnit")}</Label>
             <Input id="o-price" type="number" step="0.01" dir="ltr" value={price} onChange={(e) => setPrice(e.target.value)} />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="o-qty">{t("orders.quantity")}</Label>
+            <Input id="o-qty" type="number" min="1" step="1" dir="ltr" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
           </div>
           <div className="grid gap-1.5">
             <Label htmlFor="o-date">{t("orders.date")}</Label>
@@ -274,8 +280,11 @@ export function OrdersPage() {
                         </div>
                       </div>
                       {o.price != null && (
-                        <span className="text-sm font-medium text-foreground" dir="ltr">
-                          {money(Number(o.price))} {o.currency ?? "ILS"}
+                        <span className="text-sm font-medium text-foreground" dir="ltr" title={`${money(Number(o.price))} × ${o.quantity}`}>
+                          {money(Number(o.price) * Number(o.quantity ?? 1))} {o.currency ?? "ILS"}
+                          {Number(o.quantity ?? 1) !== 1 && (
+                            <span className="ms-1 text-xs text-muted-foreground">×{o.quantity}</span>
+                          )}
                         </span>
                       )}
                       <AttachmentList entityType="order" entityId={o.id} compact />

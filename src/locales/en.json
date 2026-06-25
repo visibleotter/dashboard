@@ -194,7 +194,11 @@
     "newOne": "New",
     "fromProject": "from",
     "editClick": "Click to edit",
-    "noOrdersYet": "No existing orders to pick."
+    "noOrdersYet": "No existing orders to pick.",
+    "quantity": "Qty",
+    "priceUnit": "Unit price",
+    "linkOrCreate": "Link order",
+    "unlink": "Remove from this task"
   },
   "inlineTasks": {
     "add": "Task",
