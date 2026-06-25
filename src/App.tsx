@@ -12,6 +12,7 @@ import { PaymentsPage } from "@/pages/PaymentsPage";
 import { CalendarPage } from "@/pages/CalendarPage";
 import { KnowledgeBasePage } from "@/pages/KnowledgeBasePage";
 import { AccountingPage } from "@/pages/AccountingPage";
+import { VisionGuidePage } from "@/pages/VisionGuidePage";
 
 /*
   Top-level: auth gate, then the router (Phase 3).
@@ -46,6 +47,7 @@ function App() {
           <Route path="orders" element={<OrdersPage />} />
           <Route path="payments" element={<PaymentsPage />} />
           <Route path="kb" element={<KnowledgeBasePage />} />
+          <Route path="vision" element={<VisionGuidePage />} />
           <Route path="accounting" element={<AccountingPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

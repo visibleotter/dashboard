@@ -6,6 +6,7 @@ import {
   ListChecks,
   ShoppingCart,
   Wallet,
+  Eye,
   BookOpen,
   Calculator,
   LogOut,
@@ -32,6 +33,7 @@ const NAV: NavItem[] = [
   { to: "/orders", icon: ShoppingCart, key: "nav.orders" },
   { to: "/payments", icon: Wallet, key: "nav.payments" },
   { to: "/accounting", icon: Calculator, key: "nav.accounting" },
+  { to: "/vision", icon: Eye, key: "nav.vision" },
   { to: "/kb", icon: BookOpen, key: "nav.kb" },
 ];
 
